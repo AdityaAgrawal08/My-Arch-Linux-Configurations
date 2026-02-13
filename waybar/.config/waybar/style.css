@@ -1,0 +1,67 @@
+* {
+  font-family: "JetBrainsMono Nerd Font", "Noto Sans", monospace;
+  font-size: 13px;
+  color: #eceff4;
+}
+
+window#waybar {
+  background: rgba(25, 25, 35, 0.55);
+  border-radius: 12px;
+  padding: 6px 8px;
+}
+
+/* Generic module styling */
+#cpu,
+#memory,
+#backlight,
+#battery,
+#pulseaudio,
+#power-profiles-daemon,
+#clock,
+#tray {
+  padding: 4px 12px;
+  margin: 2px 6px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ---------------------------------------------------------
+   FIX NETWORK / VOLUME / BLUETOOTH POPUP MENU VISIBILITY
+--------------------------------------------------------- */
+
+menu,
+menu * {
+  background-color: #2e3440;
+  /* Dark background */
+  color: #eceff4;
+  /* Light text */
+  font-family: "JetBrainsMono Nerd Font", monospace;
+}
+
+/* Hovered item (cursor over) */
+menuitem:hover,
+menuitem:active {
+  background-color: #4c566a;
+  /* Highlight */
+  color: #ffffff;
+  /* White text */
+}
+
+/* Checked / selected item (e.g., connected network) */
+menuitem:checked {
+  background-color: #5e81ac;
+  color: #ffffff;
+}
+
+#workspaces button {
+  padding: 4px 10px;
+  border-radius: 12px;
+  color: #bbbbbb;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+#workspaces button.active {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.25);
+  font-weight: bold;
+}

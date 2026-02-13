@@ -1,0 +1,76 @@
+add_newline = false
+
+# MAIN FORMAT: clean + readable
+format = """
+$username$directory$git_branch$git_status$python$nodejs$rust$c$cmd_duration
+$character
+"""
+
+# USERNAME MODULE
+[username]
+show_always = true
+format = "[$user](bold cyan) "
+
+# PROMPT SYMBOL
+[character]
+success_symbol = "[>](bold green)"
+error_symbol = "[x](bold red)"
+
+# DIRECTORY
+[directory]
+style = "bold blue"
+truncation_length = 3
+truncate_to_repo = true
+home_symbol = "~"
+
+# GIT
+[git_branch]
+symbol = " "
+style = "bold yellow"
+
+[git_status]
+style = "yellow"
+format = "($all_status) "
+
+# PYTHON
+[python]
+symbol = " "
+style = "bold green"
+python_binary = "python3"
+detect_extensions = ["py"]
+detect_files = ["pyproject.toml", "requirements.txt", "Pipfile"]
+detect_folders = ["venv", ".venv"]
+disabled = true
+
+# NODEJS
+[nodejs]
+symbol = " "
+style = "bold green"
+detect_extensions = ["js", "ts"]
+detect_files = ["package.json", ".node-version", ".nvmrc"]
+disabled = true
+
+
+# RUST
+[rust]
+symbol = " "
+style = "bold red"
+detect_extensions = ["rs"]
+disabled = true
+
+# C / C++
+[c]
+symbol = " "
+style = "bold blue"
+detect_extensions = ["c", "h", "cpp", "hpp", "cc"]
+disabled = true
+
+# COMMAND DURATION
+[cmd_duration]
+#min_time = 500
+#format = "took [$duration](bold purple)"
+disabled = true
+# DISABLED MODULES
+[time]
+disabled = true
+
