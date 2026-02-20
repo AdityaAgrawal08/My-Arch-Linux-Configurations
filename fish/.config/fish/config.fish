@@ -27,4 +27,3 @@ set -g fish_color_autosuggestion brgrey
 if type -q starship
     starship init fish | source
 end
-
