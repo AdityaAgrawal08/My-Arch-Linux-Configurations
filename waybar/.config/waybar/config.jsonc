@@ -122,13 +122,14 @@
   },
   "battery": {
     "states": {
+      "good": 80,
       "warning": 30,
-      "critical": 15
+      "critical": 20
     },
     "format": "{capacity}% {icon}",
-    "format-full": "{capacity}% {icon}",
-    "format-charging": "{capacity}% ",
-    "format-plugged": "{capacity}% ",
+    "format-charging": "⚡ {capacity}%",
+    "format-plugged": "🔌 {capacity}%",
+    "format-full": "🔋 100%",
     "format-alt": "{time} {icon}",
     "format-icons": [
       "",
