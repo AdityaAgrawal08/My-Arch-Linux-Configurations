@@ -1,16 +1,14 @@
 /* ~/.config/wofi/style.css */
-
 * {
   font-family: "JetBrainsMono Nerd Font", "Noto Sans", monospace;
   font-size: 14px;
+  /* Increased from 14px for much clearer text */
 }
 
 window {
   margin: 0px;
   border: 2px solid #5e81ac;
-  /* Nord blue border */
   background-color: #2e3440;
-  /* Dark background */
   border-radius: 12px;
 }
 
@@ -19,9 +17,9 @@ window {
   border: none;
   color: #eceff4;
   background-color: #4c566a;
-  /* Slightly lighter input box */
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 12px 16px;
+  /* Increased padding for a larger search box */
 }
 
 #inner-box {
@@ -48,7 +46,8 @@ window {
 }
 
 #entry {
-  padding: 4px;
+  padding: 8px 10px;
+  /* More breathing room between list items */
   margin: 2px 10px;
   border-radius: 8px;
 }
