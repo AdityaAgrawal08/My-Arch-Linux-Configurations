@@ -5,8 +5,13 @@ echo "Chosen: '$chosen'" >/tmp/power-menu.log
 case "$chosen" in
     *Lock*)
         pkill wofi
-        aplay /home/aditya/Downloads/close.wav &
-        ~/dotfiles/lid-sounds/unlock-hook.sh 
+        mpv --no-terminal /home/aditya/Downloads/close.wav &
+        MPV_PID=$!
+        hyprlock &
+        sleep 2.5
+        kill $MPV_PID 2>/dev/null
+        wait
+        mpv --no-terminal /home/aditya/Downloads/open.wav
         ;;
     *Restart*)
         pkill wofi
