@@ -1,6 +1,6 @@
 // -*- mode: jsonc -*-
 {
-  "height": 10,
+  "height": 2,
   "spacing": 4,
   "modules-left": [
     "hyprland/workspaces",
@@ -15,7 +15,6 @@
     "mpd",
     //"idle_inhibitor",
     "pulseaudio",
-    "power-profiles-daemon",
     "cpu",
     "memory",
     "backlight",
@@ -141,17 +140,6 @@
   },
   "battery#bat2": {
     "bat": "BAT2"
-  },
-  "power-profiles-daemon": {
-    "format": "{icon}",
-    "tooltip-format": "Power profile: {profile}\nDriver: {driver}",
-    "tooltip": true,
-    "format-icons": {
-      "default": "",
-      "performance": "",
-      "balanced": "",
-      "power-saver": ""
-    }
   },
   "pulseaudio": {
     "format": "{volume}% {icon} {format_source}",

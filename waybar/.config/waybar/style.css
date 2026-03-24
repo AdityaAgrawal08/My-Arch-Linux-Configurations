@@ -1,13 +1,13 @@
 * {
   font-family: "JetBrainsMono Nerd Font", "Noto Sans", monospace;
-  font-size: 13px;
+  font-size: 11px;
   color: #eceff4;
 }
 
 window#waybar {
   background: rgba(25, 25, 35, 0.55);
   border-radius: 12px;
-  padding: 6px 8px;
+  padding: 1px 1px;
 }
 
 /* Generic module styling */
