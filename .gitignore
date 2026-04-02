@@ -3,3 +3,4 @@
 *.cache
 .DS_Store
 
+.config/fish/fish_variables
