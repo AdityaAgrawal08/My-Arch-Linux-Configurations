@@ -27,3 +27,7 @@ end
 if type -q starship
     starship init fish | source
 end
+
+function open
+    zathura $argv
+end
