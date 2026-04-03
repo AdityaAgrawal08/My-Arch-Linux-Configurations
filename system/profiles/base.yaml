@@ -1,0 +1,8 @@
+packages:
+  pacman:
+    - base-devel
+    - git
+    - stow
+    - neovim
+    - fish
+  aur: []

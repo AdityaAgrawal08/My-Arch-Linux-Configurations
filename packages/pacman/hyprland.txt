@@ -1,0 +1,4 @@
+waybar
+wl-clipboard
+grim
+slurp

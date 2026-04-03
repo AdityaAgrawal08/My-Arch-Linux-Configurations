@@ -1,0 +1,16 @@
+id: arch-hyprland
+
+profiles:
+  - base
+  - hyprland
+
+dotfiles:
+  - hyprland
+  - waybar
+  - nvim
+  - fish
+
+services:
+  user:
+    - pipewire
+    - wireplumber
