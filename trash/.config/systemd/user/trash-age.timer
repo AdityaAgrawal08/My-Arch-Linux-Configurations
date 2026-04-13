@@ -1,0 +1,9 @@
+[Unit]
+Description=Increment trash active days
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

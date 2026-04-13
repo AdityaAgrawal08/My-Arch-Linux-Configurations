@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+
+[ -f "$HOME/.config/trash-system/env" ] && source "$HOME/.config/trash-system/env"
+
+BASE="${TRASH_BASE:-$HOME/.local/share/trash-system}"
+DB="${TRASH_DB:-$BASE/db/trash.db}"
+OBJ="${TRASH_OBJECTS:-$BASE/objects}"
+LOCK="$DB.lock"
+
+# Dependency check
+for cmd in sqlite3 file uuidgen flock; do
+    command -v $cmd >/dev/null 2>&1 || {
+        echo "Missing dependency: $cmd"
+        exit 1
+    }
+done
+
+# SQL escape
+sql_escape() {
+    echo "$1" | sed "s/'/''/g"
+}
+
+ts=$(date +%s)
+year=$(date +%Y)
+month=$(date +%m)
+day=$(date +%d)
+
+for target in "$@"; do
+    [ -e "$target" ] || continue
+
+    abs=$(realpath -- "$target" 2>/dev/null) || continue
+    name=$(basename -- "$target")
+    ext="${name##*.}"
+    uuid=$(cat /proc/sys/kernel/random/uuid)
+
+    # SAFETY: block critical paths
+    case "$abs" in
+        "/"|"/home"|"/usr"|"/etc")
+            echo "Refusing critical path: $abs"
+            continue
+            ;;
+    esac
+
+    # SAFETY: prevent trash recursion
+    case "$abs" in
+        "$BASE"*)
+            echo "Skipping internal trash path"
+            continue
+            ;;
+    esac
+
+    # MIME + category
+    if [ -d "$target" ]; then
+        mime="directory"
+        category="folder"
+    else
+        mime=$(file --mime-type -b -- "$target" 2>/dev/null)
+        [ -z "$mime" ] && mime="application/octet-stream"
+
+        case "$mime" in
+            image/*) category="image" ;;
+            text/*) category="document" ;;
+            video/*) category="video" ;;
+            application/zip|application/x-tar) category="archive" ;;
+            *) category="other" ;;
+        esac
+    fi
+
+    size=$(du -sb -- "$target" 2>/dev/null | awk '{print $1}')
+    origin=$(echo "$abs" | cut -d/ -f2)
+
+    # Fast git detection (no subprocess)
+    project=""
+    if [ -d "$(dirname "$target")/.git" ]; then
+        project=$(dirname "$target")
+    fi
+
+    dest_dir="$OBJ/$year/$month/$day/${ext:-noext}"
+    mkdir -p "$dest_dir"
+
+    dest="$dest_dir/${uuid}__${name}"
+    tmp_dest="${dest}.tmp"
+
+    # STEP 1: move to temp
+    mv -- "$target" "$tmp_dest" || continue
+
+    # STEP 2: transactional DB insert
+    flock "$LOCK" sqlite3 "$DB" "BEGIN;
+    INSERT INTO trash (
+        id, original_path, filename, extension, deletion_time,
+        mime_type, category, origin_root, project_root,
+        storage_path, size, hash, is_restored, active_days, pinned
+    ) VALUES (
+        '$(sql_escape "$uuid")',
+        '$(sql_escape "$abs")',
+        '$(sql_escape "$name")',
+        '$(sql_escape "$ext")',
+        $ts,
+        '$(sql_escape "$mime")',
+        '$(sql_escape "$category")',
+        '$(sql_escape "$origin")',
+        '$(sql_escape "${project:-}")',
+        '$(sql_escape "$dest")',
+        $size,
+        NULL,
+        0,
+        0,
+        0
+    );
+    COMMIT;" || {
+        mv -- "$tmp_dest" "$target"
+        echo "Failed to record in DB, restored: $target"
+        continue
+    }
+
+    # STEP 3: finalize move
+    mv -- "$tmp_dest" "$dest"
+
+done

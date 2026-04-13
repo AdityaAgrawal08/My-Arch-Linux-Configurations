@@ -1,0 +1,3 @@
+.local/share/trash-system/db/*.db
+.local/share/trash-system/db/*.lock
+.local/share/trash-system/objects/

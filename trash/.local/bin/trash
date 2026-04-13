@@ -1,0 +1,230 @@
+#!/usr/bin/env bash
+[ -f "$HOME/.config/trash-system/env" ] && source "$HOME/.config/trash-system/env"
+BASE="${TRASH_BASE:-$HOME/.local/share/trash-system}"
+DB="${TRASH_DB:-$BASE/db/trash.db}"
+OBJ="${TRASH_OBJECTS:-$BASE/objects}"
+
+case "$1" in
+
+list)
+    sqlite3 -column -header "$DB" \
+    "SELECT
+        ROW_NUMBER() OVER (ORDER BY deletion_time DESC) as no,
+        substr(id,1,8) as id,
+        filename,
+        datetime(deletion_time,'unixepoch') as deleted,
+        category
+     FROM trash
+     WHERE is_restored=0
+     ORDER BY deletion_time DESC;"
+    ;;
+
+search)
+    shift
+
+    query="SELECT 
+        substr(id,1,8) as id,
+        filename,
+        datetime(deletion_time,'unixepoch') as deleted,
+        category
+     FROM trash
+     WHERE is_restored=0"
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --name)
+                query="$query AND filename LIKE '%$2%'"
+                shift 2
+                ;;
+            --type)
+                query="$query AND extension='$2'"
+                shift 2
+                ;;
+            --cat)
+                query="$query AND category='$2'"
+                shift 2
+                ;;
+            --path)
+                query="$query AND original_path LIKE '%$2%'"
+                shift 2
+                ;;
+            --from)
+                query="$query AND deletion_time >= strftime('%s','$2')"
+                shift 2
+                ;;
+            --to)
+                query="$query AND deletion_time <= strftime('%s','$2')"
+                shift 2
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+
+    query="$query ORDER BY deletion_time DESC;"
+    sqlite3 -column -header "$DB" "$query"
+    ;;
+
+delete)
+    arg="$2"
+
+    # CASE 1: range delete (e.g., 1-5)
+    if [[ "$arg" =~ ^[0-9]+-[0-9]+$ ]]; then
+
+        start=$(echo "$arg" | cut -d'-' -f1)
+        end=$(echo "$arg" | cut -d'-' -f2)
+
+        ids=$(sqlite3 "$DB" "
+        SELECT id FROM (
+            SELECT id, ROW_NUMBER() OVER (ORDER BY deletion_time DESC) as rn
+            FROM trash
+            WHERE is_restored=0 AND COALESCE(pinned,0)=0
+        ) WHERE rn BETWEEN $start AND $end;
+        ")
+
+        [ -z "$ids" ] && { echo "No files in range"; exit 1; }
+
+        echo "Deleting range $start-$end"
+        read -p "Confirm? (y/N): " confirm
+        [ "$confirm" != "y" ] && exit 0
+
+        for full_id in $ids; do
+            path=$(sqlite3 "$DB" \
+            "SELECT storage_path FROM trash WHERE id='$full_id';")
+
+            [ -e "$path" ] && rm -rf "$path"
+
+            sqlite3 "$DB" \
+            "DELETE FROM trash WHERE id='$full_id';"
+        done
+
+        echo "Deleted range"
+        exit 0
+    fi
+
+    # CASE 2: normal UUID delete
+    id="$arg"
+
+    row=$(sqlite3 -separator '|' "$DB" \
+    "SELECT id, storage_path 
+     FROM trash 
+     WHERE id LIKE '$id%' AND is_restored=0 AND COALESCE(pinned,0)=0
+     LIMIT 1;")
+
+    [ -z "$row" ] && { echo "Not found or pinned"; exit 1; }
+
+    full_id=$(echo "$row" | cut -d'|' -f1)
+    path=$(echo "$row" | cut -d'|' -f2)
+
+    echo "Deleting: $path"
+    read -p "Delete permanently? (y/N): " confirm
+    [ "$confirm" != "y" ] && exit 0
+
+    [ -e "$path" ] && rm -rf "$path"
+
+    sqlite3 "$DB" \
+    "DELETE FROM trash WHERE id='$full_id';"
+
+    echo "Deleted"
+    ;;
+
+
+restore)
+    id="$2"
+
+    row=$(sqlite3 -separator '|' "$DB" \
+    "SELECT storage_path, original_path 
+     FROM trash 
+     WHERE id LIKE '$id%' AND is_restored=0
+     LIMIT 1;")
+
+    [ -z "$row" ] && { echo "Invalid ID"; exit 1; }
+
+    storage=$(echo "$row" | cut -d'|' -f1)
+    original=$(echo "$row" | cut -d'|' -f2)
+
+    mkdir -p "$(dirname "$original")"
+
+    base="$original"
+    i=1
+
+    while [ -e "$original" ]; do
+      original="${base}_restored_$i"
+      i=$((i+1))
+    done
+
+    echo "Restoring:"
+    echo "FROM: $storage"
+    echo "TO:   $original"
+
+    mv "$storage" "$original"
+
+    sqlite3 "$DB" \
+    "UPDATE trash SET is_restored=1 WHERE id LIKE '$id%';"
+
+    echo "Restored → $original"
+    ;;
+
+recent)
+    sqlite3 -column -header "$DB" \
+    "SELECT substr(id,1,8), filename
+     FROM trash
+     WHERE is_restored=0
+     ORDER BY deletion_time DESC
+     LIMIT 10;"
+    ;;
+
+undo)
+    id=$(sqlite3 "$DB" \
+    "SELECT id FROM trash WHERE is_restored=0 ORDER BY deletion_time DESC LIMIT 1;")
+
+    [ -z "$id" ] && exit 0
+
+    ~/.local/bin/trash restore "$id"
+    ;;
+
+stats)
+    sqlite3 "$DB" \
+    "SELECT COUNT(*) as files,
+            ROUND(SUM(size)/1024/1024,2) as MB
+     FROM trash
+     WHERE is_restored=0;"
+    ;;
+
+group)
+    sqlite3 "$DB" \
+    "SELECT extension, COUNT(*) 
+     FROM trash 
+     WHERE is_restored=0 
+     GROUP BY extension;"
+    ;;
+
+pin)
+    id="$2"
+    sqlite3 "$DB" \
+    "UPDATE trash SET pinned=1 WHERE id LIKE '$id%';"
+    echo "Pinned"
+    ;;
+
+unpin)
+    id="$2"
+    sqlite3 "$DB" \
+    "UPDATE trash SET pinned=0 WHERE id LIKE '$id%';"
+    echo "Unpinned"
+    ;;
+
+*)
+    echo "Usage:"
+    echo "trash list"
+    echo "trash search --name <name> --type <ext> --path <path>"
+    echo "trash restore <id>"
+    echo "trash delete <id>"
+    echo "trash undo"
+    echo "trash stats"
+    echo "trash group"
+    echo "trash pin <id>"
+    echo "trash-ui"
+    ;;
+
+esac
