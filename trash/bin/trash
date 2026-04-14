@@ -34,8 +34,19 @@ get_row_by_prefix() {
     sqlite3 -separator '|' "$DB" "
     SELECT id, original_path, storage_path, hash, size
     FROM trash
-    WHERE id LIKE '$1%' AND is_restored=0
-    LIMIT 1;"
+    WHERE id LIKE '$1%' AND is_restored=0;" | \
+    while IFS='|' read -r id orig store hash size; do
+
+        path=$(get_object_path "$hash")
+
+        if [ -f "$path" ]; then
+            echo "$id|$orig|$store|$hash|$size"
+            return 0
+        else
+            # auto-clean stale entry
+            sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
+        fi
+    done
 }
 
 ref_count() {
@@ -77,15 +88,29 @@ verify_object() {
 case "${1:-}" in
 
 list)
-    sqlite3 -column -header "$DB" "
-    SELECT ROW_NUMBER() OVER (ORDER BY deletion_time DESC) as no,
-           substr(id,1,8) as id,
-           filename,
-           datetime(deletion_time,'unixepoch'),
-           category
-    FROM trash
-    WHERE is_restored=0
-    ORDER BY deletion_time DESC;"
+    echo "no     id        filename                         datetime              category"
+    echo "--  --------  ------------------------------  --------------------  --------"
+
+    i=1
+    sqlite3 -separator '|' "$DB" "
+    SELECT id, filename, deletion_time, category
+    FROM trash WHERE is_restored=0
+    ORDER BY deletion_time DESC;" | \
+    while IFS='|' read -r id filename deletion_time category; do
+
+        hash=$(sqlite3 "$DB" "SELECT hash FROM trash WHERE id='$id';")
+        path=$(get_object_path "$hash")
+
+        if [ -f "$path" ]; then
+            printf "%2d  %-8s  %-30s  %-20s  %s\n" \
+                "$i" "${id:0:8}" "$filename" \
+                "$(date -d @$deletion_time '+%F %T')" \
+                "$category"
+            i=$((i+1))
+        else
+            sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
+        fi
+    done
     ;;
 
 search)
@@ -219,18 +244,23 @@ unpin)
     sqlite3 "$DB" "UPDATE trash SET pinned=0 WHERE id LIKE '$2%';"
     ;;
 
-repair)
-    sqlite3 "$DB" "SELECT id, hash FROM trash WHERE is_restored=0;" | \
-    while IFS='|' read -r id hash; do
-        path=$(get_object_path "$hash")
+cleanup)
+    # configurable days (default 100)
+    days="${2:-100}"
+    cutoff=$(date -d "-$days days" +%s)
 
-        if [ ! -f "$path" ]; then
-            echo "Removing stale entry: $id"
-            sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
-        fi
+    sqlite3 -separator '|' "$DB" "
+    SELECT id, hash FROM trash
+    WHERE is_restored=0
+      AND deletion_time < $cutoff
+      AND COALESCE(pinned,0)=0;" | \
+    while IFS='|' read -r id hash; do
+        echo "Cleaning: $id"
+        sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
+        safe_delete_object "$hash"
     done
 
-    echo "Repair complete"
+    echo "Cleanup complete (>$days days)"
     ;;
 
 *)

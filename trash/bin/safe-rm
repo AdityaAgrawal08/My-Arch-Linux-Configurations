@@ -70,13 +70,11 @@ for target in "$@"; do
         project=$(dirname "$target")
     fi
 
-    # STEP 1: move to temp
-    tmp=$(mktemp -p "$OBJ" tmp.XXXXXX)
-    mv -- "$target" "$tmp" || continue
-
-    # STEP 2: compute hash
-    hash=$(sha256sum "$tmp" | awk '{print $1}')
-
+    # STEP 1 and 2:
+    hash=$(sha256sum "$target" | awk '{print $1}')
+    tmp=$(mktemp)
+    mv -- "$target" "$tmp"
+    
     # STEP 3: CAS path
     hash_dir="$OBJ/${hash:0:2}/${hash:2:2}"
     mkdir -p "$hash_dir"
@@ -84,13 +82,13 @@ for target in "$@"; do
 
     # STEP 4: deduplication
     created=0
-    if [ -f "$dest" ]; then
-        rm -rf "$tmp"
+    mkdir -p "$hash_dir"
+    if ! mv -n -- "$tmp" "$dest" 2>/dev/null; then
+      rm -f "$tmp"
+      created=0
     else
-        mv -- "$tmp" "$dest"
-        created=1
+      created=1
     fi
-
     uuid=$(cat /proc/sys/kernel/random/uuid)
 
     # STEP 5: DB insert (transactional)
