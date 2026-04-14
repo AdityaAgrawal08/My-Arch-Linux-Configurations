@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+get_object_path() {
+    local hash="$1"
+    echo "$OBJ/${hash:0:2}/${hash:2:2}/$hash"
+}
+
 # ================= CONFIG =================
 [ -f "$HOME/.config/trash-system/env" ] && source "$HOME/.config/trash-system/env"
 
@@ -13,10 +18,10 @@ mkdir -p "$BASE" "$OBJ" "$(dirname "$DB")"
 
 # ================= LOCK =================
 exec 200>"$LOCK"
-flock -n 200 || {
-    echo "ERROR: another operation in progress"
+if ! flock -w 2 200; then
+    echo "ERROR: lock timeout"
     exit 1
-}
+fi
 
 # ================= UTIL =================
 
@@ -36,13 +41,15 @@ get_row_by_prefix() {
 ref_count() {
     sqlite3 "$DB" "
     SELECT COUNT(*) FROM trash
-    WHERE storage_path='$1' AND is_restored=0;"
+    WHERE hash='$1' AND is_restored=0;"
 }
 
 safe_delete_object() {
-    local path="$1"
+    local hash="$1"
+    local path
+    path=$(get_object_path "$hash")
 
-    count=$(ref_count "$path")
+    count=$(ref_count "$hash")
 
     if [ "$count" -eq 0 ]; then
         [ -e "$path" ] && rm -rf -- "$path"
@@ -58,18 +65,12 @@ verify_object() {
     local actual
     actual=$(sha256sum "$path" | awk '{print $1}')
 
-    [ "$actual" != "$expected" ] && fail "hash mismatch (corruption)"
+    if [ "$actual" != "$expected" ]; then
+      fail "hash mismatch (corruption)"
+    fi
 }
 
-atomic_copy() {
-    local src="$1"
-    local dst="$2"
 
-    tmp="${dst}.tmp.$$"
-
-    cp -- "$src" "$tmp" || fail "copy failed"
-    mv "$tmp" "$dst" || fail "atomic move failed"
-}
 
 # ================= COMMANDS =================
 
@@ -128,11 +129,12 @@ delete)
         [ "$c" != "y" ] && exit 0
 
         for id in $ids; do
-            path=$(sqlite3 "$DB" "SELECT storage_path FROM trash WHERE id='$id';")
+          row=$(sqlite3 -separator '|' "$DB" \
+            "SELECT id, hash FROM trash WHERE id='$id';")
 
-            sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
-
-            safe_delete_object "$path"
+          hash=$(cut -d'|' -f2 <<< "$row")
+          sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
+          safe_delete_object "$hash"
         done
 
         echo "Deleted range"
@@ -143,14 +145,12 @@ delete)
     [ -z "$row" ] && fail "not found or pinned"
 
     id=$(cut -d'|' -f1 <<< "$row")
-    path=$(cut -d'|' -f3 <<< "$row")
-
     read -p "Delete permanently? (y/N): " c
     [ "$c" != "y" ] && exit 0
 
+    hash=$(cut -d'|' -f4 <<< "$row")
     sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
-
-    safe_delete_object "$path"
+    safe_delete_object "$hash"
 
     echo "Deleted"
     ;;
@@ -161,8 +161,14 @@ restore)
 
     id=$(cut -d'|' -f1 <<< "$row")
     orig=$(cut -d'|' -f2 <<< "$row")
-    store=$(cut -d'|' -f3 <<< "$row")
     hash=$(cut -d'|' -f4 <<< "$row")
+    store=$(get_object_path "$hash")
+
+    if [ ! -f "$store" ]; then
+      echo "ERROR: object missing → $hash"
+      echo "Fix: run 'trash repair'"
+      exit 1
+    fi
 
     verify_object "$store" "$hash"
 
@@ -170,11 +176,14 @@ restore)
 
     mkdir -p "$(dirname "$orig")"
 
-    atomic_copy "$store" "$orig"
+    echo "RESTORE: $store -> $orig"
+    cp -v -- "$store" "$orig" || fail "copy failed"
+    sqlite3 "$DB" "UPDATE trash SET is_restored=1 WHERE id='$id';" || {
+      rm -f "$orig"
+      fail "DB update failed after restore"
+    }
 
-    sqlite3 "$DB" "UPDATE trash SET is_restored=1 WHERE id='$id';"
-
-    echo "Restored"
+echo "Restored"
     ;;
 
 undo)
@@ -208,6 +217,20 @@ pin)
 
 unpin)
     sqlite3 "$DB" "UPDATE trash SET pinned=0 WHERE id LIKE '$2%';"
+    ;;
+
+repair)
+    sqlite3 "$DB" "SELECT id, hash FROM trash WHERE is_restored=0;" | \
+    while IFS='|' read -r id hash; do
+        path=$(get_object_path "$hash")
+
+        if [ ! -f "$path" ]; then
+            echo "Removing stale entry: $id"
+            sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
+        fi
+    done
+
+    echo "Repair complete"
     ;;
 
 *)
