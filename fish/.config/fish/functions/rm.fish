@@ -2,7 +2,6 @@ function rm
     set files
     set dirs
 
-    # Separate files and directories
     for arg in $argv
         if test -d $arg
             set dirs $dirs $arg
@@ -11,18 +10,19 @@ function rm
         end
     end
 
-    # If recursive flag → normal rm (no change)
+    # Recursive delete → bypass trash (explicit + consistent)
     if contains -- -r $argv; or contains -- -rf $argv; or contains -- -fr $argv
+        echo "Recursive delete bypasses trash"
         command rm $argv
         return
     end
 
-    # Send files to trash
+    # Files → trash
     if test (count $files) -gt 0
         /usr/bin/env bash ~/.local/bin/safe-rm $files
     end
 
-    # Keep directory behavior same as default rm
+    # Directories → normal rm
     if test (count $dirs) -gt 0
         command rm $dirs
     end

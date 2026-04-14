@@ -1,3 +1,9 @@
-.local/share/trash-system/db/*.db
-.local/share/trash-system/db/*.lock
+# Runtime database
+.local/share/trash-system/db/
+
+# Locks
+.local/share/trash-system/*.lock
+.local/share/trash-system/.lock
+
+# Stored deleted files (content-addressed storage)
 .local/share/trash-system/objects/

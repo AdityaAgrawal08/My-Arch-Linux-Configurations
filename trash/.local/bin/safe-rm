@@ -8,7 +8,7 @@ OBJ="${TRASH_OBJECTS:-$BASE/objects}"
 LOCK="$DB.lock"
 
 # Dependency check
-for cmd in sqlite3 file uuidgen flock; do
+for cmd in sqlite3 file flock sha256sum; do
     command -v $cmd >/dev/null 2>&1 || {
         echo "Missing dependency: $cmd"
         exit 1
@@ -21,70 +21,79 @@ sql_escape() {
 }
 
 ts=$(date +%s)
-year=$(date +%Y)
-month=$(date +%m)
-day=$(date +%d)
+
+# Ensure directories + lock
+mkdir -p "$OBJ"
+mkdir -p "$(dirname "$DB")"
+touch "$LOCK"
 
 for target in "$@"; do
     [ -e "$target" ] || continue
 
     abs=$(realpath -- "$target" 2>/dev/null) || continue
     name=$(basename -- "$target")
-    ext="${name##*.}"
-    uuid=$(cat /proc/sys/kernel/random/uuid)
 
-    # SAFETY: block critical paths
-    case "$abs" in
-        "/"|"/home"|"/usr"|"/etc")
-            echo "Refusing critical path: $abs"
-            continue
-            ;;
+    case "$name" in
+        *.*) ext="${name##*.}" ;;
+        *) ext="" ;;
     esac
 
-    # SAFETY: prevent trash recursion
+    # Safety guards
     case "$abs" in
-        "$BASE"*)
-            echo "Skipping internal trash path"
-            continue
-            ;;
+        "/"|"/home"|"/usr"|"/etc") continue ;;
+        "$BASE"*) continue ;;
     esac
 
-    # MIME + category
+    # Skip directories
     if [ -d "$target" ]; then
-        mime="directory"
-        category="folder"
-    else
-        mime=$(file --mime-type -b -- "$target" 2>/dev/null)
-        [ -z "$mime" ] && mime="application/octet-stream"
-
-        case "$mime" in
-            image/*) category="image" ;;
-            text/*) category="document" ;;
-            video/*) category="video" ;;
-            application/zip|application/x-tar) category="archive" ;;
-            *) category="other" ;;
-        esac
+        echo "Skipping directory: $target"
+        continue
     fi
 
-    size=$(du -sb -- "$target" 2>/dev/null | awk '{print $1}')
+    # MIME + category
+    mime=$(file --mime-type -b -- "$target" 2>/dev/null)
+    [ -z "$mime" ] && mime="application/octet-stream"
+
+    case "$mime" in
+        image/*) category="image" ;;
+        text/*) category="document" ;;
+        video/*) category="video" ;;
+        application/zip|application/x-tar) category="archive" ;;
+        *) category="other" ;;
+    esac
+
+    size=$(stat -c%s "$target" 2>/dev/null || du -sb -- "$target" | awk '{print $1}')
     origin=$(echo "$abs" | cut -d/ -f2)
 
-    # Fast git detection (no subprocess)
     project=""
     if [ -d "$(dirname "$target")/.git" ]; then
         project=$(dirname "$target")
     fi
 
-    dest_dir="$OBJ/$year/$month/$day/${ext:-noext}"
-    mkdir -p "$dest_dir"
-
-    dest="$dest_dir/${uuid}__${name}"
-    tmp_dest="${dest}.tmp"
-
     # STEP 1: move to temp
-    mv -- "$target" "$tmp_dest" || continue
+    tmp=$(mktemp -p "$OBJ" tmp.XXXXXX)
+    mv -- "$target" "$tmp" || continue
 
-    # STEP 2: transactional DB insert
+    # STEP 2: compute hash
+    hash=$(sha256sum "$tmp" | awk '{print $1}')
+
+    # STEP 3: CAS path
+    hash_dir="$OBJ/${hash:0:2}/${hash:2:2}"
+    mkdir -p "$hash_dir"
+    dest="$hash_dir/$hash"
+
+    # STEP 4: deduplication
+    created=0
+    if [ -f "$dest" ]; then
+        rm -rf "$tmp"
+    else
+        mv -- "$tmp" "$dest"
+        created=1
+    fi
+
+    uuid=$(cat /proc/sys/kernel/random/uuid)
+
+    # STEP 5: DB insert (transactional)
     flock "$LOCK" sqlite3 "$DB" "BEGIN;
     INSERT INTO trash (
         id, original_path, filename, extension, deletion_time,
@@ -102,18 +111,21 @@ for target in "$@"; do
         '$(sql_escape "${project:-}")',
         '$(sql_escape "$dest")',
         $size,
-        NULL,
+        '$(sql_escape "$hash")',
         0,
         0,
         0
     );
     COMMIT;" || {
-        mv -- "$tmp_dest" "$target"
-        echo "Failed to record in DB, restored: $target"
+        # STRICT rollback (no orphan, no duplication inconsistency)
+        if [ "$created" -eq 1 ]; then
+            mv -- "$dest" "$target"
+        else
+            cp -- "$dest" "$target"
+        fi
+
+        echo "DB insert failed → restored file"
         continue
     }
-
-    # STEP 3: finalize move
-    mv -- "$tmp_dest" "$dest"
 
 done

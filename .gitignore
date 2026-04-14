@@ -1,35 +1,46 @@
-*.backup
-*.cache
-fish/.config/fish/fish_variables
-
-# State (generated)
-state/
-logs/
-
-# Python environments (critical)
-.local/share/*/venv/
-
-# System artifacts
-*.log
-
-# Package build leftovers
-*.pkg.tar.zst
-*.pkg.tar.zst.sig
-
-# Python / misc (future-proof)
-__pycache__/
-*.pyc
-
-# Node / tooling (if ever added)
-node_modules/
-
-# Editor
+# ---------------------------
+# System / Editor
+# ---------------------------
+.DS_Store
 *.swp
 *.swo
 
-# OS noise
-.DS_Store
+# ---------------------------
+# Logs / Runtime state
+# ---------------------------
+*.log
+logs/
+state/
+.cache/
 
-# Git
-.git/
+# ---------------------------
+# Python (pdfmerge etc.)
+# ---------------------------
+__pycache__/
+*.pyc
 
+# ---------------------------
+# Package build artifacts (Arch)
+# ---------------------------
+*.pkg.tar.zst
+*.pkg.tar.zst.sig
+
+# ---------------------------
+# Environments (explicit only)
+# ---------------------------
+.local/share/*/venv/
+
+# ---------------------------
+# Node (future-proof)
+# ---------------------------
+node_modules/
+
+# ---------------------------
+# Fish runtime state
+# ---------------------------
+fish/.config/fish/fish_variables
+
+# ---------------------------
+# Backup files
+# ---------------------------
+*.backup

@@ -1,0 +1,5 @@
+brave-bin
+cloudflare-warp-bin
+grub-customizer
+visual-studio-code-bin
+zen-browser-bin
