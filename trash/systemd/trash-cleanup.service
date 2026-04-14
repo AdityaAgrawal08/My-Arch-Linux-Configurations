@@ -1,0 +1,6 @@
+[Unit]
+Description=Trash Cleanup
+
+[Service]
+Type=oneshot
+ExecStart=/home/aditya/.local/bin/trash cleanup 100

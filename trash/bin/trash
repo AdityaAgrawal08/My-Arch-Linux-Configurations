@@ -16,6 +16,19 @@ LOCK="$BASE/.lock"
 
 mkdir -p "$BASE" "$OBJ" "$(dirname "$DB")"
 
+# ================= DB INTEGRITY CHECK =================
+if ! sqlite3 "$DB" "PRAGMA integrity_check;" | grep -q ok; then
+    echo "ERROR: DB corrupted, attempting recovery..."
+
+    ts=$(date +%s)
+    mv "$DB" "$DB.corrupt.$ts" 2>/dev/null || true
+
+    bash "$HOME/dotfiles/trash/scripts/init-db.sh"
+
+    echo "New DB initialized. Old DB preserved as trash.db.corrupt.$ts"
+    exit 1
+fi
+
 # ================= LOCK =================
 exec 200>"$LOCK"
 if ! flock -w 2 200; then
@@ -261,6 +274,20 @@ cleanup)
     done
 
     echo "Cleanup complete (>$days days)"
+    ;;
+
+health)
+    sqlite3 "$DB" "PRAGMA integrity_check;" | grep -q ok || {
+        echo "ERROR: DB corrupted"
+        exit 1
+    }
+
+    find "$OBJ" -type f >/dev/null 2>&1 || {
+        echo "ERROR: object store inaccessible"
+        exit 1
+    }
+
+    echo "OK"
     ;;
 
 *)

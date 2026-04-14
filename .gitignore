@@ -48,3 +48,21 @@ fish/.config/fish/fish_variables
 trash/.local/
 *.db
 *.lock
+
+
+# ---------------------------
+# Trash system (strict isolation)
+# ---------------------------
+
+# Absolute runtime path (critical)
+.local/share/trash-system/
+
+# Object store (defensive)
+trash-system/objects/
+
+# SQLite WAL / SHM (you enabled WAL)
+*.db-wal
+*.db-shm
+
+# Lock files (more precise than *.lock alone)
+*.db.lock
