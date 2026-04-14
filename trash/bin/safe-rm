@@ -5,7 +5,7 @@
 BASE="${TRASH_BASE:-$HOME/.local/share/trash-system}"
 DB="${TRASH_DB:-$BASE/db/trash.db}"
 OBJ="${TRASH_OBJECTS:-$BASE/objects}"
-LOCK="$DB.lock"
+LOCK="$BASE/.lock"
 
 # Dependency check
 for cmd in sqlite3 file flock sha256sum; do
@@ -25,7 +25,7 @@ ts=$(date +%s)
 # Ensure directories + lock
 mkdir -p "$OBJ"
 mkdir -p "$(dirname "$DB")"
-touch "$LOCK"
+
 
 for target in "$@"; do
     [ -e "$target" ] || continue
@@ -94,7 +94,14 @@ for target in "$@"; do
     uuid=$(cat /proc/sys/kernel/random/uuid)
 
     # STEP 5: DB insert (transactional)
-    flock "$LOCK" sqlite3 "$DB" "BEGIN;
+    exec 200>"$LOCK"
+    flock -n 200 || {
+      echo "ERROR: another operation in progress"
+      exit 1
+    }
+
+    sqlite3 "$DB" "BEGIN;
+    
     INSERT INTO trash (
         id, original_path, filename, extension, deletion_time,
         mime_type, category, origin_root, project_root,
