@@ -1,1 +1,131 @@
-../../dotfiles/trash/.local/bin/safe-rm
+#!/usr/bin/env bash
+
+[ -f "$HOME/.config/trash-system/env" ] && source "$HOME/.config/trash-system/env"
+
+BASE="${TRASH_BASE:-$HOME/.local/share/trash-system}"
+DB="${TRASH_DB:-$BASE/db/trash.db}"
+OBJ="${TRASH_OBJECTS:-$BASE/objects}"
+LOCK="$DB.lock"
+
+# Dependency check
+for cmd in sqlite3 file flock sha256sum; do
+    command -v $cmd >/dev/null 2>&1 || {
+        echo "Missing dependency: $cmd"
+        exit 1
+    }
+done
+
+# SQL escape
+sql_escape() {
+    echo "$1" | sed "s/'/''/g"
+}
+
+ts=$(date +%s)
+
+# Ensure directories + lock
+mkdir -p "$OBJ"
+mkdir -p "$(dirname "$DB")"
+touch "$LOCK"
+
+for target in "$@"; do
+    [ -e "$target" ] || continue
+
+    abs=$(realpath -- "$target" 2>/dev/null) || continue
+    name=$(basename -- "$target")
+
+    case "$name" in
+        *.*) ext="${name##*.}" ;;
+        *) ext="" ;;
+    esac
+
+    # Safety guards
+    case "$abs" in
+        "/"|"/home"|"/usr"|"/etc") continue ;;
+        "$BASE"*) continue ;;
+    esac
+
+    # Skip directories
+    if [ -d "$target" ]; then
+        echo "Skipping directory: $target"
+        continue
+    fi
+
+    # MIME + category
+    mime=$(file --mime-type -b -- "$target" 2>/dev/null)
+    [ -z "$mime" ] && mime="application/octet-stream"
+
+    case "$mime" in
+        image/*) category="image" ;;
+        text/*) category="document" ;;
+        video/*) category="video" ;;
+        application/zip|application/x-tar) category="archive" ;;
+        *) category="other" ;;
+    esac
+
+    size=$(stat -c%s "$target" 2>/dev/null || du -sb -- "$target" | awk '{print $1}')
+    origin=$(echo "$abs" | cut -d/ -f2)
+
+    project=""
+    if [ -d "$(dirname "$target")/.git" ]; then
+        project=$(dirname "$target")
+    fi
+
+    # STEP 1: move to temp
+    tmp=$(mktemp -p "$OBJ" tmp.XXXXXX)
+    mv -- "$target" "$tmp" || continue
+
+    # STEP 2: compute hash
+    hash=$(sha256sum "$tmp" | awk '{print $1}')
+
+    # STEP 3: CAS path
+    hash_dir="$OBJ/${hash:0:2}/${hash:2:2}"
+    mkdir -p "$hash_dir"
+    dest="$hash_dir/$hash"
+
+    # STEP 4: deduplication
+    created=0
+    if [ -f "$dest" ]; then
+        rm -rf "$tmp"
+    else
+        mv -- "$tmp" "$dest"
+        created=1
+    fi
+
+    uuid=$(cat /proc/sys/kernel/random/uuid)
+
+    # STEP 5: DB insert (transactional)
+    flock "$LOCK" sqlite3 "$DB" "BEGIN;
+    INSERT INTO trash (
+        id, original_path, filename, extension, deletion_time,
+        mime_type, category, origin_root, project_root,
+        storage_path, size, hash, is_restored, active_days, pinned
+    ) VALUES (
+        '$(sql_escape "$uuid")',
+        '$(sql_escape "$abs")',
+        '$(sql_escape "$name")',
+        '$(sql_escape "$ext")',
+        $ts,
+        '$(sql_escape "$mime")',
+        '$(sql_escape "$category")',
+        '$(sql_escape "$origin")',
+        '$(sql_escape "${project:-}")',
+        '$(sql_escape "$dest")',
+        $size,
+        '$(sql_escape "$hash")',
+        0,
+        0,
+        0
+    );
+    COMMIT;" || {
+        # STRICT rollback (no orphan, no duplication inconsistency)
+        if [ "$created" -eq 1 ]; then
+            mv -- "$dest" "$target"
+        else
+            cp -- "$dest" "$target"
+        fi
+
+        echo "DB insert failed → restored file"
+        continue
+    }
+
+done
