@@ -193,28 +193,427 @@ cp -r hypr/.config/hypr ~/.config/
 
 *Add screenshots of your setup here*
 
-## Contributing
 
-This is a personal configuration repository, but suggestions and improvements are welcome! Feel free to:
-- Open an issue for questions or problems
-- Submit a pull request with improvements
-- Fork this repository and customize it for your own use
+# Trash System
+## 1. Overview
 
-## License
+This system is a **Content Addressable Storage (CAS)-based trash management system** built on top of:
 
-This project is open source and available under the [MIT License](LICENSE).
-
-## Acknowledgments
-
-- [Hyprland](https://hyprland.org/) - Amazing Wayland compositor
-- [Waybar](https://github.com/Alexays/Waybar) - Customizable status bar
-- The Arch Linux community for excellent documentation
-- All the developers of the tools used in this configuration
-
-## Contact
-
-For questions or feedback, feel free to open an issue on this repository.
+* Filesystem (CAS layer) → stores file blobs using hash
+* SQLite database (metadata layer) → tracks logical state
+* Shell interface (`trash`, `safe-rm`) → user interaction
+* systemd timers → lifecycle automation
 
 ---
 
-**Note:** These configurations are personal and may need adjustments for your specific hardware and preferences. Always backup your existing configurations before applying new ones.
+## 2. Core Architecture
+
+### 2.1 Storage Model
+
+```
+User deletes file
+        ↓
+safe-rm intercepts
+        ↓
+File → hashed (sha256)
+        ↓
+Stored in CAS (objects/)
+        ↓
+Metadata stored in SQLite (trash.db)
+```
+
+---
+
+### 2.2 Components
+
+| Component  | Role               |
+| ---------- | ------------------ |
+| safe-rm    | intercept deletion |
+| trash      | CLI interface      |
+| objects/   | CAS storage        |
+| trash.db   | metadata           |
+| meta table | schema version     |
+| systemd    | automation         |
+
+---
+
+### 2.3 Directory Layout
+
+```
+~/.local/share/trash-system/
+├── db/
+│   ├── trash.db
+│   └── trash.db.lock
+└── objects/
+    └── <hash-prefix>/<hash>
+```
+
+---
+
+## 3. Data Model
+
+### 3.1 Main Table
+
+```sql
+CREATE TABLE trash (
+    id TEXT PRIMARY KEY,
+    original_path TEXT,
+    filename TEXT,
+    extension TEXT,
+    deletion_time INTEGER,
+    mime_type TEXT,
+    category TEXT,
+    origin_root TEXT,
+    project_root TEXT,
+    storage_path TEXT,
+    size INTEGER,
+    hash TEXT,
+    is_restored INTEGER DEFAULT 0,
+    active_days INTEGER DEFAULT 0,
+    pinned INTEGER DEFAULT 0
+);
+```
+
+---
+
+### 3.2 Meta Table
+
+```sql
+CREATE TABLE meta (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);
+```
+
+---
+
+### 3.3 Index
+
+```sql
+CREATE INDEX idx_hash_active
+ON trash(hash)
+WHERE is_restored=0;
+```
+
+---
+
+## 4. CAS Storage
+
+### 4.1 Object Path
+
+```
+$OBJ/${hash:0:2}/${hash:2:2}/$hash
+```
+
+---
+
+### 4.2 Deduplication
+
+```
+mv -n tmp dest
+```
+
+* If exists → reuse
+* Else → create
+
+---
+
+## 5. Commands
+
+---
+
+### 5.1 Delete (safe-rm)
+
+```
+rm file
+```
+
+Flow:
+
+1. hash file
+2. move to temp
+3. CAS placement
+4. DB insert
+5. rollback on failure
+
+---
+
+### 5.2 List
+
+```
+trash list
+```
+
+---
+
+### 5.3 Restore
+
+```
+trash restore <id>
+```
+
+Flow:
+
+1. fetch DB
+2. resolve object
+3. verify hash
+4. restore file
+5. mark restored
+
+---
+
+### 5.4 Delete (permanent)
+
+```
+trash delete <id>
+trash delete 1-5
+```
+
+* pinned → blocked
+* range → skips pinned
+
+---
+
+### 5.5 Clear
+
+```
+trash clear
+```
+
+Deletes everything:
+
+* DB entries
+* CAS objects
+
+---
+
+### 5.6 Pin / Unpin
+
+```
+trash pin <id>
+trash unpin <id>
+```
+
+Pinned items:
+
+* cannot be deleted
+* not cleaned automatically
+
+---
+
+### 5.7 Cleanup (systemd)
+
+```
+trash cleanup 100
+```
+
+Deletes:
+
+* unpinned
+* older than N days
+
+---
+
+### 5.8 Scan (GC)
+
+```
+trash scan
+```
+
+Removes orphan objects:
+
+```
+if object not referenced in DB → delete
+```
+
+---
+
+### 5.9 Health
+
+```
+trash health
+```
+
+Checks:
+
+* DB integrity
+* object store
+
+---
+
+## 6. Consistency Model
+
+```
+DB = source of truth
+CAS = storage
+```
+
+---
+
+### Valid State
+
+```
+DB entry exists → object exists
+```
+
+---
+
+### Orphan State
+
+```
+object exists, DB missing → removed by scan
+```
+
+---
+
+### Broken State
+
+```
+DB exists, object missing → restore fails
+```
+
+---
+
+## 7. Concurrency
+
+Locking:
+
+```
+exec 200>"$LOCK"
+flock -n 200
+```
+
+Guarantee:
+
+* single writer
+* no race conditions
+
+---
+
+## 8. SQLite Configuration
+
+```sql
+PRAGMA journal_mode=WAL;
+PRAGMA synchronous=FULL;
+PRAGMA foreign_keys=ON;
+```
+
+---
+
+## 9. Systemd
+
+### Timer
+
+```
+trash-cleanup.timer
+```
+
+### Service
+
+```
+ExecStart=trash cleanup 100
+```
+
+---
+
+## 10. Shell Integration
+
+Fish function:
+
+```
+files → safe-rm
+directories → rm
+recursive → bypass
+```
+
+---
+
+## 11. Repo Structure
+
+```
+trash/
+├── bin/
+├── scripts/
+├── config/
+├── systemd/
+├── install.sh
+└── uninstall.sh
+```
+
+---
+
+## 12. .gitignore
+
+```
+.local/share/trash-system/
+*.db
+*.db-wal
+*.db-shm
+*.db.lock
+objects/
+```
+
+---
+
+## 13. Failure Handling
+
+| Case       | Behavior |
+| ---------- | -------- |
+| DB failure | rollback |
+| corruption | abort    |
+| lock fail  | exit     |
+
+---
+
+## 14. Safety Rules
+
+* protects system paths
+* prevents overwrite
+* skips directories
+* enforces pin
+
+---
+
+## 15. Limitations
+
+* no recovery without DB
+* full hashing cost
+* single writer
+* no versioning
+
+---
+
+## 16. Future Enhancements
+
+* force restore
+* compression
+* logging
+* chunk hashing
+
+---
+
+## 17. Final Guarantees
+
+* no accidental loss
+* deduplicated storage
+* crash-safe
+* consistent state
+* reproducible setup
+
+---
+
+## Final Statement
+
+This system is a:
+
+```
+CAS + SQLite + WAL + Locking + GC + Systemd
+```
+
+based trash architecture that is:
+
+* consistent
+* durable
+* production-grade
+* fully operational
+
