@@ -148,18 +148,21 @@ search)
 
 delete)
     arg="${2:-}"
-
     [ -z "$arg" ] && fail "missing id"
 
+    # ---------- RANGE DELETE ----------
     if [[ "$arg" =~ ^[0-9]+-[0-9]+$ ]]; then
         start=${arg%-*}
         end=${arg#*-}
 
         ids=$(sqlite3 "$DB" "
         SELECT id FROM (
-            SELECT id, ROW_NUMBER() OVER (ORDER BY deletion_time DESC) rn
-            FROM trash WHERE is_restored=0 AND COALESCE(pinned,0)=0
-        ) WHERE rn BETWEEN $start AND $end;")
+            SELECT id,
+                   ROW_NUMBER() OVER (ORDER BY deletion_time DESC) rn
+            FROM trash
+            WHERE is_restored=0
+        ) WHERE rn BETWEEN $start AND $end;
+        ")
 
         [ -z "$ids" ] && fail "empty range"
 
@@ -167,26 +170,44 @@ delete)
         [ "$c" != "y" ] && exit 0
 
         for id in $ids; do
-          row=$(sqlite3 -separator '|' "$DB" \
-            "SELECT id, hash FROM trash WHERE id='$id';")
+            pinned=$(sqlite3 "$DB" "SELECT COALESCE(pinned,0) FROM trash WHERE id='$id';")
 
-          hash=$(cut -d'|' -f2 <<< "$row")
-          sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
-          safe_delete_object "$hash"
+            if [ "$pinned" -eq 1 ]; then
+                echo "Skipping pinned: ${id:0:8}"
+                continue
+            fi
+
+            row=$(sqlite3 -separator '|' "$DB" \
+                "SELECT id, hash FROM trash WHERE id='$id';")
+
+            hash=$(cut -d'|' -f2 <<< "$row")
+
+            sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
+            safe_delete_object "$hash"
         done
 
-        echo "Deleted range"
+        echo "Deleted range (excluding pinned)"
         exit 0
     fi
 
+    # ---------- SINGLE DELETE ----------
     row=$(get_row_by_prefix "$arg")
-    [ -z "$row" ] && fail "not found or pinned"
+    [ -z "$row" ] && fail "not found"
 
     id=$(cut -d'|' -f1 <<< "$row")
+
+    pinned=$(sqlite3 "$DB" "SELECT COALESCE(pinned,0) FROM trash WHERE id='$id';")
+
+    if [ "$pinned" -eq 1 ]; then
+        echo "ERROR: item is pinned. Unpin before deleting."
+        exit 1
+    fi
+
     read -p "Delete permanently? (y/N): " c
     [ "$c" != "y" ] && exit 0
 
     hash=$(cut -d'|' -f4 <<< "$row")
+
     sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
     safe_delete_object "$hash"
 
@@ -265,8 +286,9 @@ cleanup)
     sqlite3 -separator '|' "$DB" "
     SELECT id, hash FROM trash
     WHERE is_restored=0
-      AND deletion_time < $cutoff
-      AND COALESCE(pinned,0)=0;" | \
+    AND COALESCE(pinned,0)=0
+    AND deletion_time < $cutoff
+    AND COALESCE(pinned,0)=0;" | \
     while IFS='|' read -r id hash; do
         echo "Cleaning: $id"
         sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
@@ -288,6 +310,36 @@ health)
     }
 
     echo "OK"
+    ;;
+
+clear)
+    read -p "Permanently delete ALL trash? (y/N): " c
+    [ "$c" != "y" ] && exit 0
+
+    sqlite3 "$DB" "DELETE FROM trash;"
+
+    rm -rf "$OBJ"/*
+    mkdir -p "$OBJ"
+
+    echo "Trash fully cleared"
+    ;;
+
+scan)
+    echo "Scanning for orphan objects..."
+
+    find "$OBJ" -type f | while read -r path; do
+        hash=$(basename "$path")
+
+        count=$(sqlite3 "$DB" \
+            "SELECT COUNT(*) FROM trash WHERE hash='$hash' AND is_restored=0;")
+
+        if [ "$count" -eq 0 ]; then
+            echo "Removing orphan: $hash"
+            rm -f "$path"
+        fi
+    done
+
+    echo "Scan complete"
     ;;
 
 *)

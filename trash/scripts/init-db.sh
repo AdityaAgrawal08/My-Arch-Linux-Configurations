@@ -42,6 +42,11 @@ CREATE TABLE IF NOT EXISTS trash (
 INSERT OR IGNORE INTO meta (key, value)
 VALUES ('schema_version', '1');
 
+-- ================= INDEX (ADD THIS) =================
+CREATE INDEX IF NOT EXISTS idx_hash_active
+ON trash(hash)
+WHERE is_restored=0;
+
 EOF
 
 touch "$DB.lock"
