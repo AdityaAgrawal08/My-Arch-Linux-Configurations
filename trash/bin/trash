@@ -101,29 +101,53 @@ verify_object() {
 case "${1:-}" in
 
 list)
-    echo "no     id        filename                         datetime              category"
-    echo "--  --------  ------------------------------  --------------------  --------"
+    rows=$(sqlite3 -separator '|' "$DB" "
+    SELECT
+        ROW_NUMBER() OVER (ORDER BY deletion_time DESC),
+        substr(id,1,8),
+        filename,
+        deletion_time,
+        category
+    FROM trash
+    WHERE is_restored=0
+    ORDER BY deletion_time DESC;
+    ")
 
-    i=1
-    sqlite3 -separator '|' "$DB" "
-    SELECT id, filename, deletion_time, category
-    FROM trash WHERE is_restored=0
-    ORDER BY deletion_time DESC;" | \
-    while IFS='|' read -r id filename deletion_time category; do
+    # column widths
+    w_no=3
+    w_id=8
+    w_name=35
+    w_date=10
+    w_time=8
+    w_cat=10
 
-        hash=$(sqlite3 "$DB" "SELECT hash FROM trash WHERE id='$id';")
-        path=$(get_object_path "$hash")
+    # header
+    printf "%-${w_no}s  %-${w_id}s  %-${w_name}s  %-${w_date}s  %-${w_time}s  %-${w_cat}s\n" \
+        "no" "id" "filename" "date" "time" "category"
 
-        if [ -f "$path" ]; then
-            printf "%2d  %-8s  %-30s  %-20s  %s\n" \
-                "$i" "${id:0:8}" "$filename" \
-                "$(date -d @$deletion_time '+%F %T')" \
-                "$category"
-            i=$((i+1))
-        else
-            sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
-        fi
-    done
+    printf "%-${w_no}s  %-${w_id}s  %-${w_name}s  %-${w_date}s  %-${w_time}s  %-${w_cat}s\n" \
+        "--" "--------" "-----------------------------------" "----------" "--------" "----------"
+
+    while IFS='|' read -r no id name ts cat; do
+
+        # system-based date/time (no assumptions)
+        date_str=$(date -d "@$ts" '+%Y-%m-%d')
+        time_str=$(date -d "@$ts" '+%H:%M:%S')
+
+        # wrap filename
+        mapfile -t lines < <(echo "$name" | fold -s -w $w_name)
+
+        for i in "${!lines[@]}"; do
+            if [ "$i" -eq 0 ]; then
+                printf "%-${w_no}s  %-${w_id}s  %-${w_name}s  %-${w_date}s  %-${w_time}s  %-${w_cat}s\n" \
+                    "$no" "$id" "${lines[$i]}" "$date_str" "$time_str" "$cat"
+            else
+                printf "%-${w_no}s  %-${w_id}s  %-${w_name}s\n" \
+                    "" "" "${lines[$i]}"
+            fi
+        done
+
+    done <<< "$rows"
     ;;
 
 search)
