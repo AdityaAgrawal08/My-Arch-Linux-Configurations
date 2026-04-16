@@ -43,6 +43,10 @@ fail() {
     exit 1
 }
 
+sql_escape() {
+    echo "$1" | sed "s/'/''/g"
+}
+
 get_row_by_prefix() {
     sqlite3 -separator '|' "$DB" "
     SELECT id, original_path, storage_path, hash, size
@@ -151,23 +155,63 @@ list)
     ;;
 
 search)
-    shift
-    query="SELECT substr(id,1,8), filename, datetime(deletion_time,'unixepoch'), category
-           FROM trash WHERE is_restored=0"
+    query="${2:-}"
+    order="${3:-}"
 
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            --name) query="$query AND filename LIKE '%$2%'" ; shift 2 ;;
-            --type) query="$query AND extension='$2'" ; shift 2 ;;
-            --cat)  query="$query AND category='$2'" ; shift 2 ;;
-            --path) query="$query AND original_path LIKE '%$2%'" ; shift 2 ;;
-            --from) query="$query AND deletion_time >= strftime('%s','$2')" ; shift 2 ;;
-            --to)   query="$query AND deletion_time <= strftime('%s','$2')" ; shift 2 ;;
-            *) shift ;;
-        esac
-    done
+    [ -z "$query" ] && fail "missing search term"
 
-    sqlite3 -column -header "$DB" "$query ORDER BY deletion_time DESC;"
+    # sorting logic
+    if [ "$order" = "-desc" ]; then
+        sort="ASC"
+    else
+        sort="DESC"
+    fi
+
+    rows=$(sqlite3 -separator '|' "$DB" "
+    SELECT
+        ROW_NUMBER() OVER (ORDER BY deletion_time $sort),
+        substr(id,1,8),
+        filename,
+        deletion_time,
+        category
+    FROM trash
+    WHERE is_restored=0
+      AND filename LIKE '%$(sql_escape "$query")%'
+    ORDER BY deletion_time $sort;
+    ")
+
+    # column widths (same as list)
+    w_no=3
+    w_id=8
+    w_name=35
+    w_date=10
+    w_time=8
+    w_cat=10
+
+    printf "%-${w_no}s  %-${w_id}s  %-${w_name}s  %-${w_date}s  %-${w_time}s  %-${w_cat}s\n" \
+        "no" "id" "filename" "date" "time" "category"
+
+    printf "%-${w_no}s  %-${w_id}s  %-${w_name}s  %-${w_date}s  %-${w_time}s  %-${w_cat}s\n" \
+        "--" "--------" "-----------------------------------" "----------" "--------" "----------"
+
+    while IFS='|' read -r no id name ts cat; do
+
+        date_str=$(date -d "@$ts" '+%Y-%m-%d')
+        time_str=$(date -d "@$ts" '+%H:%M:%S')
+
+        mapfile -t lines < <(echo "$name" | fold -s -w $w_name)
+
+        for i in "${!lines[@]}"; do
+            if [ "$i" -eq 0 ]; then
+                printf "%-${w_no}s  %-${w_id}s  %-${w_name}s  %-${w_date}s  %-${w_time}s  %-${w_cat}s\n" \
+                    "$no" "$id" "${lines[$i]}" "$date_str" "$time_str" "$cat"
+            else
+                printf "%-${w_no}s  %-${w_id}s  %-${w_name}s\n" \
+                    "" "" "${lines[$i]}"
+            fi
+        done
+
+    done <<< "$rows"
     ;;
 
 delete)
