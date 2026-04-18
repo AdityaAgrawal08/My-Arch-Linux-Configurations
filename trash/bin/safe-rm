@@ -20,7 +20,6 @@ sql_escape() {
     echo "$1" | sed "s/'/''/g"
 }
 
-ts=$(date +%s)
 
 # Ensure directories + lock
 mkdir -p "$OBJ"
@@ -38,7 +37,12 @@ for target in "$@"; do
 
     abs=$(realpath -- "$target" 2>/dev/null) || continue
     name=$(basename -- "$target")
-
+    ts=$(date +%s)
+    origin=$(echo "$abs" | cut -d/ -f2)
+    project=""
+    if [ -d "$(dirname "$target")/.git" ]; then
+      project=$(dirname "$target")
+    fi
     case "$name" in
         *.*) ext="${name##*.}" ;;
         *) ext="" ;;
@@ -50,12 +54,104 @@ for target in "$@"; do
         "$BASE"*) continue ;;
     esac
 
-    # Skip directories
-    if [ -d "$target" ]; then
-        echo "Skipping directory: $target"
+# ================= DIRECTORY HANDLING =================
+if [ -d "$target" ]; then
+    uuid=$(cat /proc/sys/kernel/random/uuid)
+    manifest_dir="$OBJ/manifests"
+    mkdir -p "$manifest_dir"
+
+    manifest="$manifest_dir/$uuid.json"
+    tmpdir=$(mktemp -d)
+
+    # -------- SAFE COPY --------
+    cp -a -- "$target" "$tmpdir/dir" || {
+        echo "Directory copy failed"
+        rm -rf "$tmpdir"
         continue
+    }
+
+    # temp manifest file (no collision)
+    manifest_files=$(mktemp "$manifest_dir/XXXX.files")
+
+    # -------- INGEST INTO CAS --------
+    while IFS= read -r -d '' f; do
+    rel="${f#$tmpdir/dir/}"
+    hash=$(sha256sum "$f" | awk '{print $1}')
+
+    hash_dir="$OBJ/${hash:0:2}/${hash:2:2}"
+    mkdir -p "$hash_dir"
+    dest="$hash_dir/$hash"
+
+    tmp_obj=$(mktemp)
+    cp -- "$f" "$tmp_obj"
+    if ! mv -n -- "$tmp_obj" "$dest" 2>/dev/null; then
+        rm -f "$tmp_obj"
     fi
 
+    echo "$rel|$hash" >> "$manifest_files"
+    done < <(find "$tmpdir/dir" -type f -print0)
+
+    # -------- BUILD MANIFEST --------
+    if [ -s "$manifest_files" ]; then
+        files_json=$(awk -F'|' '{printf "    {\"path\":\"%s\",\"hash\":\"%s\"},\n",$1,$2}' "$manifest_files" | sed '$ s/,$//')
+    else
+        files_json=""
+    fi
+    manifest_tmp=$(mktemp "$manifest_dir/XXXX.tmp")
+  {
+    echo "{"
+    echo "  \"type\": \"directory\","
+    echo "  \"version\": 1,"
+    echo "  \"original_path\": \"$(sql_escape "$abs")\","
+    echo "  \"files\": ["
+    echo "$files_json"
+    echo "  ]"
+    echo "}"
+  } > "$manifest_tmp"
+  mv -f "$manifest_tmp" "$manifest"
+  
+    rm -f "$manifest_files"
+    size=$(du -sb -- "$target" | awk '{print $1}')
+    # -------- DB INSERT FIRST (ATOMICITY) --------
+    sqlite3 "$DB" "BEGIN;
+    INSERT INTO trash (
+      id, original_path, filename, extension, deletion_time,
+      mime_type, category, origin_root, project_root,
+      storage_path, size, hash, is_restored, active_days, pinned
+    ) VALUES (
+      '$(sql_escape "$uuid")',
+      '$(sql_escape "$abs")',
+      '$(sql_escape "$name")',
+      '',
+      $ts,
+      'inode/directory',
+      'directory',
+      '$(sql_escape "$origin")',
+      '$(sql_escape "${project:-}")',
+      '$(sql_escape "$manifest")',
+      $size,
+      'DIR',
+      0,
+      0,
+      0
+    );
+    COMMIT;" || {
+        echo "Directory DB insert failed → rollback"
+
+        rm -f "$manifest"
+        rm -rf "$tmpdir"
+        continue
+    }
+
+    # -------- DELETE ONLY AFTER SUCCESS --------
+    rm -rf -- "$target"
+
+    # cleanup
+    rm -rf "$tmpdir"
+
+    sync
+    continue
+fi
     # MIME + category
     mime=$(file --mime-type -b -- "$target" 2>/dev/null)
     [ -z "$mime" ] && mime="application/octet-stream"
@@ -69,17 +165,16 @@ for target in "$@"; do
     esac
 
     size=$(stat -c%s "$target" 2>/dev/null || du -sb -- "$target" | awk '{print $1}')
-    origin=$(echo "$abs" | cut -d/ -f2)
-
-    project=""
-    if [ -d "$(dirname "$target")/.git" ]; then
-        project=$(dirname "$target")
-    fi
+    
 
     # STEP 1 and 2:
 hash=$(sha256sum "$target" | awk '{print $1}')
 tmp=$(mktemp)
-mv -- "$target" "$tmp"
+cp -- "$target" "$tmp" || {
+    echo "Copy failed for $target"
+    rm -f "$tmp"
+    continue
+}
 
 # STEP 3: CAS path
 hash_dir="$OBJ/${hash:0:2}/${hash:2:2}"
@@ -124,15 +219,18 @@ INSERT INTO trash (
 
 COMMIT;" || {
     # rollback (strict)
-    if [ "$created" -eq 1 ]; then
-        mv -- "$dest" "$target"
+    if [ -f "$dest" ]; then
+      cp -- "$dest" "$target"
     else
-        cp -- "$dest" "$target"
-    fi
-
+      cp -- "$tmp" "$target"
+    fi || {
+      echo "CRITICAL: rollback failed for $target"
+      continue
+    }
     echo "DB insert failed → restored file"
     continue
 }
+rm -f -- "$target"
 # ================= DURABILITY =================
 sync
 done

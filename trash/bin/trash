@@ -54,16 +54,20 @@ get_row_by_prefix() {
     WHERE id LIKE '$1%' AND is_restored=0;" | \
     while IFS='|' read -r id orig store hash size; do
 
-        path=$(get_object_path "$hash")
-
-        if [ -f "$path" ]; then
-            echo "$id|$orig|$store|$hash|$size"
-            return 0
+        if [ "$hash" = "DIR" ]; then
+          path="$store"
         else
-            # auto-clean stale entry
-            sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
+          path=$(get_object_path "$hash")
         fi
-    done
+
+if [ -f "$path" ]; then
+    echo "$id|$orig|$store|$hash|$size"
+    return 0
+else
+    # auto-clean stale entry
+    sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
+fi
+done
 }
 
 ref_count() {
@@ -132,7 +136,7 @@ list)
     printf "%-${w_no}s  %-${w_id}s  %-${w_name}s  %-${w_date}s  %-${w_time}s  %-${w_cat}s\n" \
         "--" "--------" "-----------------------------------" "----------" "--------" "----------"
 
-    while IFS='|' read -r no id name ts cat; do
+    echo "$rows" | grep -v '^$' | while IFS='|' read -r no id name ts cat; do
 
         # system-based date/time (no assumptions)
         date_str=$(date -d "@$ts" '+%Y-%m-%d')
@@ -194,7 +198,7 @@ search)
     printf "%-${w_no}s  %-${w_id}s  %-${w_name}s  %-${w_date}s  %-${w_time}s  %-${w_cat}s\n" \
         "--" "--------" "-----------------------------------" "----------" "--------" "----------"
 
-    while IFS='|' read -r no id name ts cat; do
+    echo "$rows" | grep -v '^$' | while IFS='|' read -r no id name ts cat; do
 
         date_str=$(date -d "@$ts" '+%Y-%m-%d')
         time_str=$(date -d "@$ts" '+%H:%M:%S')
@@ -251,7 +255,9 @@ delete)
             hash=$(cut -d'|' -f2 <<< "$row")
 
             sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
-            safe_delete_object "$hash"
+            if [ "$hash" != "DIR" ]; then
+              safe_delete_object "$hash"
+            fi
         done
 
         echo "Deleted range (excluding pinned)"
@@ -277,7 +283,9 @@ delete)
     hash=$(cut -d'|' -f4 <<< "$row")
 
     sqlite3 "$DB" "DELETE FROM trash WHERE id='$id';"
-    safe_delete_object "$hash"
+    if [ "$hash" != "DIR" ]; then
+      safe_delete_object "$hash"
+    fi
 
     echo "Deleted"
     ;;
@@ -289,17 +297,56 @@ restore)
     id=$(cut -d'|' -f1 <<< "$row")
     orig=$(cut -d'|' -f2 <<< "$row")
     hash=$(cut -d'|' -f4 <<< "$row")
-    store=$(get_object_path "$hash")
+    store=$(cut -d'|' -f3 <<< "$row")
 
-    if [ ! -f "$store" ]; then
+    if [ "$hash" != "DIR" ] && [ ! -f "$store" ]; then
       echo "ERROR: object missing → $hash"
       echo "Fix: run 'trash repair'"
       exit 1
     fi
 
-    verify_object "$store" "$hash"
+    if [ "$hash" != "DIR" ]; then
+      verify_object "$store" "$hash"
+    fi
 
     [ -e "$orig" ] && fail "target exists"
+
+    # detect directory
+if [ "$hash" = "DIR" ]; then
+    manifest="$store"
+
+    [ ! -f "$manifest" ] && fail "manifest missing"
+
+    mkdir -p "$orig"
+
+    ok=1
+
+while IFS= read -r entry; do
+    path=$(echo "$entry" | jq -r '.path')
+    hash=$(echo "$entry" | jq -r '.hash')
+
+    src=$(get_object_path "$hash")
+    dest="$orig/$path"
+
+    mkdir -p "$(dirname "$dest")"
+
+    if ! cp -- "$src" "$dest"; then
+        echo "ERROR: failed to restore $path"
+        ok=0
+        break
+    fi
+done < <(jq -c '.files[]' "$manifest")
+
+if [ "$ok" -eq 1 ]; then
+    sqlite3 "$DB" "UPDATE trash SET is_restored=1 WHERE id='$id';"
+    echo "Directory restored"
+    exit 0
+else
+    echo "ERROR: partial restore, rolling back"
+    rm -rf -- "$orig"
+    exit 1
+fi
+fi
 
     mkdir -p "$(dirname "$orig")"
 
