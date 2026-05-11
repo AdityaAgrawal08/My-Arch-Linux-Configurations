@@ -1,80 +1,122 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 import sys
-import argparse
+from pathlib import Path
+
 from pypdf import PdfReader, PdfWriter
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
-parser = argparse.ArgumentParser()
-parser.add_argument("dir", nargs="?", default=".")
-args = parser.parse_args()
 
-if not os.path.isdir(args.dir):
-    print("Invalid directory")
-    sys.exit(1)
+OUTPUT_FILE = "final.pdf"
+TEMP_TOC = ".__pdfmerge_toc__.pdf"
 
-os.chdir(args.dir)
 
-files = sorted(
-    [f for f in os.listdir(".") if f.lower().endswith(".pdf")],
-    key=lambda f: os.path.getmtime(f)
-)
+def get_pdf_files():
+    files = []
 
-if not files:
-    print("No PDF files found")
-    sys.exit(1)
+    for f in sorted(os.listdir(".")):
+        path = Path(f)
 
-pdfs = []
-offsets = []
-current_page = 1
+        if (
+            path.is_file()
+            and path.suffix.lower() == ".pdf"
+            and path.name != OUTPUT_FILE
+            and path.name != TEMP_TOC
+        ):
+            files.append(path)
 
-for f in files:
-    reader = PdfReader(f)
-    pdfs.append((f, reader))
-    offsets.append((f, current_page))
-    current_page += len(reader.pages)
+    return files
 
-TOC_FILE = "_toc.pdf"
 
-c = canvas.Canvas(TOC_FILE, pagesize=A4)
-width, height = A4
+def build_toc(entries, toc_pages):
+    c = canvas.Canvas(TEMP_TOC, pagesize=A4)
 
-y = height - 50
-c.setFont("Helvetica-Bold", 14)
-c.drawString(50, y, "Table of Contents")
+    width, height = A4
 
-c.setFont("Helvetica", 10)
-y -= 30
+    y = height - 50
 
-for name, page in offsets:
-    c.drawString(50, y, f"{name} .......... {page + 1}")
-    y -= 15
-    if y < 50:
-        c.showPage()
-        y = height - 50
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(50, y, "Table of Contents")
 
-c.save()
+    y -= 35
 
-writer = PdfWriter()
+    c.setFont("Helvetica", 11)
 
-toc_reader = PdfReader(TOC_FILE)
-for p in toc_reader.pages:
-    writer.add_page(p)
+    for name, page in entries:
+        actual_page = page + toc_pages
 
-current_page = len(toc_reader.pages)
+        dots = "." * max(5, 90 - len(name))
 
-for name, reader in pdfs:
-    start = current_page
-    for p in reader.pages:
-        writer.add_page(p)
-    writer.add_outline_item(name, start)
-    current_page += len(reader.pages)
+        c.drawString(
+            50,
+            y,
+            f"{name} {dots} {actual_page}"
+        )
 
-with open("final.pdf", "wb") as f:
-    writer.write(f)
+        y -= 18
 
-os.remove(TOC_FILE)
+        if y < 50:
+            c.showPage()
+            c.setFont("Helvetica", 11)
+            y = height - 50
 
-print("final.pdf created")
+    c.save()
+
+
+def main():
+    files = get_pdf_files()
+
+    if not files:
+        print("No PDF files found")
+        sys.exit(1)
+
+    pdfs = []
+    entries = []
+
+    current_page = 1
+
+    for file in files:
+        reader = PdfReader(str(file))
+
+        pdfs.append((file.name, reader))
+        entries.append((file.name, current_page))
+
+        current_page += len(reader.pages)
+
+    build_toc(entries, 0)
+
+    toc_pages = len(PdfReader(TEMP_TOC).pages)
+
+    build_toc(entries, toc_pages)
+
+    writer = PdfWriter()
+
+    toc_reader = PdfReader(TEMP_TOC)
+
+    for page in toc_reader.pages:
+        writer.add_page(page)
+
+    current_page = len(toc_reader.pages)
+
+    for name, reader in pdfs:
+        start_page = current_page
+
+        for page in reader.pages:
+            writer.add_page(page)
+
+        writer.add_outline_item(name, start_page)
+
+        current_page += len(reader.pages)
+
+    with open(OUTPUT_FILE, "wb") as f:
+        writer.write(f)
+
+    os.remove(TEMP_TOC)
+
+    print(f"{OUTPUT_FILE} created")
+
+
+if __name__ == "__main__":
+    main()
