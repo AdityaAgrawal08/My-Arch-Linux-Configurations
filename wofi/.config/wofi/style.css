@@ -1,64 +1,54 @@
-/* ~/.config/wofi/style.css */
-* {
-  font-family: "JetBrainsMono Nerd Font", "Noto Sans", monospace;
-  font-size: 14px;
-  /* Increased from 14px for much clearer text */
-}
-
+/* Window: only blue outline */
 window {
-  margin: 0px;
-  border: 2px solid #5e81ac;
-  background-color: #2e3440;
+  border: 2px solid #5a6fd8;
+  background-color: #000000;
   border-radius: 12px;
 }
 
-#input {
-  margin: 10px;
-  border: none;
-  color: #eceff4;
-  background-color: #4c566a;
-  border-radius: 8px;
-  padding: 12px 16px;
-  /* Increased padding for a larger search box */
-}
-
-#inner-box {
-  margin: 5px;
-  border: none;
-  background-color: #2e3440;
-}
-
+/* Container */
 #outer-box {
-  margin: 5px;
-  border: none;
-  background-color: #2e3440;
+  margin: 6px;
+  padding: 10px;
+  background-color: transparent;
 }
 
-#scroll {
-  margin: 0px;
-  border: none;
-}
-
-#text {
-  margin: 5px;
-  border: none;
-  color: #eceff4;
-}
-
-#entry {
-  padding: 8px 10px;
-  /* More breathing room between list items */
-  margin: 2px 10px;
+/* Input: no blue, neutral monochrome */
+#input {
+  margin: 8px;
+  padding: 6px;
+  border: 1px solid #2a2a2a;
+  background-color: #000000;
+  color: #ffffff;
   border-radius: 8px;
 }
 
-#entry:selected {
-  background-color: #5e81ac;
-  /* Highlight color matching Waybar active items */
-  outline: none;
+/* Entries */
+#entry {
+  padding: 4px 6px;
+  border-radius: 6px;
+  background-color: transparent;
 }
 
-#entry:selected #text {
+/* Text */
+#text {
+  margin: 4px;
   color: #ffffff;
-  font-weight: bold;
+}
+
+/* Selected: grayscale only (no blue) */
+#entry:selected {
+  background-color: #1a1a1a;
+}
+
+#text:selected {
+  color: #ffffff;
+}
+
+/* Scrollbar: fully black */
+scrollbar {
+  background-color: transparent;
+}
+
+scrollbar slider {
+  background-color: #000000;
 }
