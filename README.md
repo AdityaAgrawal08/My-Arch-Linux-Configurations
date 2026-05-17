@@ -1,283 +1,153 @@
-# My Arch Linux Configurations
+# 🌌 Arch Linux Configurations & Custom CAS-Trash System
 
-A collection of personal configuration files (dotfiles) for my Arch Linux setup featuring Hyprland, a dynamic tiling Wayland compositor.
+<div align="center">
 
-## Overview
+![Arch Linux](https://img.shields.io/badge/OS-Arch%20Linux-blue?style=for-the-badge&logo=arch-linux&logoColor=white)
+![Compositor](https://img.shields.io/badge/Compositor-Hyprland-85c1e9?style=for-the-badge&logo=wayland&logoColor=white)
+![Shell](https://img.shields.io/badge/Shell-Fish-4ea94b?style=for-the-badge&logo=fishshell&logoColor=white)
+![Editor](https://img.shields.io/badge/Editor-Neovim-007acc?style=for-the-badge&logo=neovim&logoColor=white)
+![Prompt](https://img.shields.io/badge/Prompt-Starship-ff5f00?style=for-the-badge&logo=starship&logoColor=white)
+![Status Bar](https://img.shields.io/badge/Status_Bar-Waybar-2c3e50?style=for-the-badge)
 
-This repository contains my customized configuration files for a clean, efficient, and visually appealing Arch Linux desktop environment. The setup is centered around Hyprland with carefully curated complementary tools to create a smooth and productive workflow.
+A premium, highly-automated dotfiles repository for Arch Linux, featuring a custom **Hyprland Wayland Compositor** desktop, automated hardware and profile-based configuration engines, and a custom **Content-Addressable Storage (CAS) Trash Management System**.
 
-## Components
+[Overview](#-overview) • [Architecture](#%EF%B8%8F-repository-architecture) • [Components](#-system-components) • [Trash System](#-cas-trash-management-system) • [Installation](#-installation-guide) • [Troubleshooting](#-troubleshooting)
 
-### Window Manager & Desktop Environment
-- **Hyprland** - A dynamic tiling Wayland compositor with smooth animations and modern features
-- **Waybar** - Highly customizable status bar for Wayland compositors
-- **Wofi** - Application launcher for Wayland
+</div>
 
-### Shell & Terminal
-- **Fish** - User-friendly command line shell with syntax highlighting and autosuggestions
-- **Starship** - Fast, customizable prompt for any shell
-- **Neovim** - Extensible text editor configured for development
+---
 
-## Directory Structure
+## 🔍 Overview
+
+This repository contains curated, modern dotfiles engineered for performance, minimalism, and aesthetic excellence. It transitions away from standard static dotfiles in favor of an **active, environment-aware configuration suite** that dynamically adapts to hardware (GPUs, Virtual Machines vs. Bare-Metal) and organizes software deployment via clean profiles.
+
+---
+
+## 🛠️ Repository Architecture
+
+Our dotfiles utilize an intelligent, profile-based provisioning system. Rather than linking files blindly, a modular shell runner detects hardware, reconciles package lists, and applies links cleanly.
 
 ```
 .
-├── fish/.config/fish/          # Fish shell configuration
-├── hypr/.config/hypr/          # Hyprland window manager configuration
-├── nvim/.config/nvim/          # Neovim editor configuration
-├── starship/.config/           # Starship prompt configuration
-├── waybar/.config/waybar/      # Waybar status bar configuration
-└── wofi/.config/wofi/          # Wofi launcher configuration
+├── fish/                       # Fish shell configs & environment wrappers
+├── hypr/                       # Hyprland, Hypridle, and Hyprlock suites
+├── lid-sounds/                 # Hardware state listening hook scripts
+├── nvim/                       # Extensible Lua-based Neovim development environment
+├── packages/                   # Declarative package lists (pacman/aur) divided by profile
+│   ├── pacman/
+│   └── aur/
+├── scripts/                    # Orchestration engines
+│   ├── core/
+│   │   ├── detect.sh           # Hardware and virtualization sensing
+│   │   ├── reconcile.sh        # Profile manifest compiler
+│   │   └── apply.sh            # Dynamic Stow-based link applicator
+│   └── bootstrap-tools.sh      # Python virtual environment orchestrator
+├── starship/                   # Starship shell prompt configuration
+├── system/                     # Repository declarations
+│   └── manifest.yaml           # Active deployment profile definitions
+├── trash/                      # Content-Addressable Storage (CAS) Trash System
+├── waybar/                     # Rich modern status bar with system monitors
+├── wofi/                       # Smooth glassmorphic application launcher
+└── zathura/                    # Keyboard-optimized document viewer
 ```
 
-## Prerequisites
+### ⚙️ Automation Engines
 
-Before using these configurations, ensure you have Arch Linux installed with the following packages:
-
-### Core Components
-```bash
-sudo pacman -S hyprland waybar wofi fish starship neovim
-```
-
-### Recommended Additional Packages
-```bash
-# Hyprland utilities
-sudo pacman -S hyprpaper hypridle hyprlock
-
-# Terminal and fonts
-sudo pacman -S kitty ttf-jetbrains-mono-nerd
-
-# System utilities
-sudo pacman -S brightnessctl playerctl pavucontrol
-```
-
-## Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/AdityaAgrawal08/My-Arch-Linux-Configurations.git
-   cd My-Arch-Linux-Configurations
-   ```
-
-2. **Backup your existing configurations:**
-   ```bash
-   mkdir -p ~/.config/backup
-   cp -r ~/.config/hypr ~/.config/backup/
-   cp -r ~/.config/waybar ~/.config/backup/
-   # Backup other configs as needed
-   ```
-
-3. **Install configurations using GNU Stow (recommended):**
-   ```bash
-   sudo pacman -S stow
-   
-   # Stow individual configurations
-   stow hypr
-   stow waybar
-   stow fish
-   stow nvim
-   stow starship
-   stow wofi
-   
-   # Or stow everything at once
-   stow */
-   ```
-
-4. **Manual installation (alternative):**
-   ```bash
-   cp -r hypr/.config/hypr ~/.config/
-   cp -r waybar/.config/waybar ~/.config/
-   cp -r fish/.config/fish ~/.config/
-   cp -r nvim/.config/nvim ~/.config/
-   cp -r starship/.config/* ~/.config/
-   cp -r wofi/.config/wofi ~/.config/
-   ```
-
-## Configuration Details
-
-### Hyprland
-The Hyprland configuration includes custom keybindings, window rules, and animation settings optimized for daily use. Key features:
-- Smooth animations and transitions
-- Efficient workspace management
-- Custom keybindings for productivity
-- Monitor configuration
-
-### Waybar
-A customized status bar showing:
-- Workspace indicators
-- System resources (CPU, memory, disk)
-- Network status
-- Audio controls
-- Date and time
-- System tray
-
-### Fish Shell
-Configured with:
-- Custom aliases and functions
-- Environment variables
-- Integration with Starship prompt
-
-### Neovim
-A personalized Neovim setup featuring:
-- Plugin management
-- Language server protocol (LSP) support
-- Custom keybindings
-- Syntax highlighting and autocompletion
-
-## Usage
-
-After installation, you can start Hyprland by:
-1. Logging out of your current session
-2. At the login manager, select Hyprland
-3. Log in with your credentials
-
-Alternatively, from a TTY:
-```bash
-Hyprland
-```
-
-### Key Bindings (Default Examples)
-
-These are common Hyprland keybindings (check `hypr/.config/hypr/hyprland.conf` for your specific bindings):
-
-- `SUPER + Return` - Open terminal
-- `SUPER + D` - Open application launcher (Wofi)
-- `SUPER + Q` - Close focused window
-- `SUPER + [1-9]` - Switch to workspace
-- `SUPER + SHIFT + [1-9]` - Move window to workspace
-- `SUPER + Mouse` - Move/resize windows
-
-## Customization
-
-Feel free to modify these configurations to suit your preferences:
-
-1. **Hyprland settings:** Edit `hypr/.config/hypr/hyprland.conf`
-2. **Waybar appearance:** Modify `waybar/.config/waybar/config` and `style.css`
-3. **Wofi styling:** Edit `wofi/.config/wofi/style.css`
-4. **Fish aliases:** Add to `fish/.config/fish/config.fish`
-5. **Starship prompt:** Customize `starship/.config/starship.toml`
-
-## Updating
-
-To update your configurations:
-
-```bash
-cd My-Arch-Linux-Configurations
-git pull origin main
-
-# If using stow
-stow -R */  # Restow all packages
-
-# Or copy manually
-cp -r hypr/.config/hypr ~/.config/
-# Repeat for other configs
-```
-
-## Troubleshooting
-
-### Hyprland won't start
-- Ensure all dependencies are installed
-- Check logs: `cat /tmp/hypr/$(echo $HYPRLAND_INSTANCE_SIGNATURE)/hyprland.log`
-- Verify your graphics drivers are properly installed
-
-### Waybar not appearing
-- Make sure Waybar is set to auto-start in `hyprland.conf`
-- Check if Waybar is running: `ps aux | grep waybar`
-- Try launching manually: `waybar`
-
-### Font issues
-- Install Nerd Fonts: `sudo pacman -S ttf-nerd-fonts-symbols`
-- Rebuild font cache: `fc-cache -fv`
-
-## Screenshots
-
-*Add screenshots of your setup here*
-
-
-# Trash System
-## 1. Overview
-
-This system is a **Content Addressable Storage (CAS)-based trash management system** built on top of:
-
-* Filesystem (CAS layer) → stores file blobs using hash
-* SQLite database (metadata layer) → tracks logical state
-* Shell interface (`trash`, `safe-rm`) → user interaction
-* systemd timers → lifecycle automation
+*   **`scripts/core/detect.sh` (Hardware Sensing):** Automatically inspects `lspci` to recognize GPU drivers (`nvidia`, `amd`, `intel`) and queries `systemd-detect-virt` to distinguish between VM guest instances and physical `baremetal` installations, saving state parameters to a JSON object.
+*   **`scripts/core/reconcile.sh` (Profile Solver):** Reads [system/manifest.yaml](file:///home/aditya/dotfiles/system/manifest.yaml), extracts targeted profiles (such as `base` and `hyprland`), matches corresponding `.txt` package sheets, merges duplicate packages, and writes resolved files.
+*   **`scripts/core/apply.sh` (Link Orchestrator):** Solves system symlinks dynamically using GNU Stow, safely ignoring system files like `state/`, `logs/`, or `.git/`, ensuring custom configurations reside correctly inside `$HOME`.
 
 ---
 
-## 2. Core Architecture
+## 🖥️ System Components
 
-### 2.1 Storage Model
+### 🪟 Hyprland & Desktop Experience
+*   **Hyprland:** A smooth, highly responsive, dynamic tiling Wayland compositor configured with physics-based animations, custom window rules, and a focus-centric workspace layout.
+*   **Hyprlock & Hypridle:** Integrated screen locking and power-saving daemons that react immediately to session idle notifications, keeping power consumption minimal.
+*   **Waybar:** A top-screen glassmorphic status bar displaying current workspace indicators, resources (CPU, Memory, Disk), dynamic audio volume level, time-date displays, and bluetooth adapter properties via custom background scripts ([waybar/.config/waybar/bluetooth.sh](file:///home/aditya/dotfiles/waybar/.config/waybar/bluetooth.sh)).
+*   **Wofi Launcher:** A high-speed application launcher custom-styled with subtle hover highlights, blurred backdrops, and modern list selections.
 
-```
-User deletes file
-        ↓
-safe-rm intercepts
-        ↓
-File → hashed (sha256)
-        ↓
-Stored in CAS (objects/)
-        ↓
-Metadata stored in SQLite (trash.db)
-```
+### 🐚 Terminal & Editors
+*   **Fish Shell:** Modern, interactive shell equipped with live syntax highlighting, autosuggestions based on command history, and custom functional wrappers.
+*   **Starship Prompt:** Fast, sleek cross-shell terminal prompt configured with dynamic Git status tags, runtime environment symbols, and execution timers.
+*   **Neovim:** A personalized development setup loading modular packages via `lazy.nvim`. Features Language Server Protocol (LSP) auto-configuration, tree-sitter syntax styling, and quick fuzzy search parameters.
+*   **Zathura:** A minimalist, keyboard-centric document viewer optimized for rapid PDF browsing. Integrates with a unique Fish shell alias `open` which maps documents directly to Zathura.
 
----
+### 🔊 Lid-Sound and Hook Triggers
+A custom background listener maps physical system triggers:
+*   **Lid Closed:** Locks the active session safely utilizing `hyprlock`.
+*   **Lid Opened:** Authenticates, plays an initialization audio sound effect (`open.wav`) utilizing `mpv` backgrounds, and wakes displays dynamically.
 
-### 2.2 Components
-
-| Component  | Role               |
-| ---------- | ------------------ |
-| safe-rm    | intercept deletion |
-| trash      | CLI interface      |
-| objects/   | CAS storage        |
-| trash.db   | metadata           |
-| meta table | schema version     |
-| systemd    | automation         |
+### 🗃️ Office & PDF Utilities
+Bundled under `.local/bin` are custom standalone scripts backed by modular Python virtual environments managed inside `.local/share/`:
+*   `docx2pdf`: Rapid command-line `.docx` to PDF document formatting.
+*   `pdf2docx`: Precise layout-preserving PDF to Microsoft Word converter.
+*   `pdfmerge`: High-fidelity PDF report compilation utility.
 
 ---
 
-### 2.3 Directory Layout
+## 🗑️ CAS Trash Management System
 
+The repository features an enterprise-grade, custom **Content-Addressable Storage (CAS)-based Trash System**. Rather than relying on simple, standard file unlinking or standard directories which lead to filename collisions, this system tracks files logically via a SQLite relational catalog and deduplicates physical files in a hashed directory structure.
+
+### 📐 System Architecture & Flow
+
+```mermaid
+graph TD
+    User["User / Shell Command"] -->|rm file| SafeRM["safe-rm (Interceptor)"]
+    SafeRM -->|1. Compute SHA-256| Hash["SHA-256 Hashing"]
+    SafeRM -->|2. Record Metadata| SQLite["SQLite DB (trash.db)"]
+    SafeRM -->|3. Copy Blob to CAS| CAS["CAS Store (.local/share/trash-system/objects/)"]
+
+    User -->|trash list/restore/delete| TrashCLI["trash (CLI Utility)"]
+    TrashCLI -->|Query / Mutate| SQLite
+    TrashCLI -->|Extract / Unlink| CAS
+
+    Systemd["Systemd User Services"] -->|Scheduled Cleanup| TrashCLI
+```
+
+### 📂 Storage Directory Structure
+All deleted objects and SQLite databases reside safely within the user's directory:
 ```
 ~/.local/share/trash-system/
 ├── db/
-│   ├── trash.db
-│   └── trash.db.lock
+│   ├── trash.db            # SQLite relational database (WAL mode)
+│   └── trash.db.lock       # Multi-process concurrency lock
 └── objects/
-    └── <hash-prefix>/<hash>
+    └── <hash-prefix>/<hash> # De-duplicated file blobs (Content Addressable)
 ```
+
+> [!NOTE]
+> **Object Paths:** Blobs are stored utilizing the standard Git directory indexing algorithm:
+> `~/.local/share/trash-system/objects/${hash:0:2}/${hash:2:2}/${hash}`
+> This prevents single-directory folder indexing limits on standard Unix filesystems.
 
 ---
 
-## 3. Data Model
+### 💾 Relational Data Model
 
-### 3.1 Main Table
-
+#### 1. Main Directory Catalog (`trash`)
 ```sql
 CREATE TABLE trash (
-    id TEXT PRIMARY KEY,
-    original_path TEXT,
-    filename TEXT,
-    extension TEXT,
-    deletion_time INTEGER,
-    mime_type TEXT,
-    category TEXT,
-    origin_root TEXT,
-    project_root TEXT,
-    storage_path TEXT,
-    size INTEGER,
-    hash TEXT,
-    is_restored INTEGER DEFAULT 0,
-    active_days INTEGER DEFAULT 0,
-    pinned INTEGER DEFAULT 0
+    id TEXT PRIMARY KEY,            -- Unique UUID identifying the deleted item
+    original_path TEXT,            -- Full absolute path prior to deletion
+    filename TEXT,                  -- Base name of the file
+    extension TEXT,                 -- File extension parsed
+    deletion_time INTEGER,          -- Epoch Unix timestamp of deletion
+    mime_type TEXT,                 -- Evaluated MIME signature
+    category TEXT,                  -- Category flags
+    origin_root TEXT,               -- Starting partition mount path
+    project_root TEXT,              -- Target git project root (if applicable)
+    storage_path TEXT,              -- Path descriptor
+    size INTEGER,                   -- Total file size in bytes
+    hash TEXT,                      -- SHA-256 hash string for CAS mapping
+    is_restored INTEGER DEFAULT 0,  -- Recovery indicator flag
+    active_days INTEGER DEFAULT 0,  -- Age counter
+    pinned INTEGER DEFAULT 0        -- Exemption status for automatic GC runs
 );
 ```
 
----
-
-### 3.2 Meta Table
-
+#### 2. Version Schema Tracker (`meta`)
 ```sql
 CREATE TABLE meta (
     key TEXT PRIMARY KEY,
@@ -285,335 +155,146 @@ CREATE TABLE meta (
 );
 ```
 
----
-
-### 3.3 Index
-
+#### 3. Active Hash Index
 ```sql
-CREATE INDEX idx_hash_active
-ON trash(hash)
-WHERE is_restored=0;
+CREATE INDEX idx_hash_active ON trash(hash) WHERE is_restored = 0;
 ```
 
 ---
 
-## 4. CAS Storage
+### 🕹️ Command Interface
 
-### 4.1 Object Path
+#### 🟩 Interceptor: `safe-rm`
+Replaces standard destructive `rm` commands for files. It performs transaction-safe operations:
+1.  Computes target file SHA-256 checksums.
+2.  Pre-stages the payload file into secure system temporary space.
+3.  Ensures database entries are saved correctly under SQLite WAL transactions.
+4.  Relocates files to deduplicated CAS paths. If the content hash already exists, the storage path is reused immediately, saving disk space.
+5.  Triggers safe atomic rollbacks on any environment, lock, or write exceptions.
 
-```
-$OBJ/${hash:0:2}/${hash:2:2}/$hash
+#### 🎛️ Controller: `trash`
+Provides powerful system commands to interact with the repository:
+
+| Command | Action | Flow / Properties |
+| :--- | :--- | :--- |
+| `trash list` | Displays catalog | Formats logical paths, extensions, sizes, dates, and pin markers. |
+| `trash restore <id>` | Restores file | Fetches metadata, pulls CAS target block, validates checksums, and restores it. |
+| `trash delete <id>` | Purges item | Cleans database entry and unlinks target CAS block. Supports lists/ranges (`1-5`). |
+| `trash clear` | Purges catalog | Performs standard truncation on active DB entries and purges all CAS objects. |
+| `trash pin <id>` | Pins item | Marks record as `pinned=1`, exempting it from automatic timers and cleanups. |
+| `trash unpin <id>`| Unpins item | Re-enables standard lifespan age limits and general cleanups. |
+| `trash cleanup <N>`| Prunes aging | Deletes non-pinned files exceeding `N` storage days. |
+| `trash scan` | GC sweeping | Scans object folder and purges orphan blobs unreferenced in `trash.db`. |
+| `trash health` | Audit check | Performs SQLite diagnostic checks (`PRAGMA integrity_check`). |
+
+---
+
+### 🛡️ Concurrency & Safety Guarantees
+
+*   **Transactional Durability:** SQLite databases operate inside **Write-Ahead Logging (WAL)** mode coupled with `synchronous = FULL` to resist filesystem corruptions, lockups, and power failures.
+*   **Writer Protection:** All operations verify locks utilizing system `flock` boundaries to ensure parallel tasks execute sequentially:
+    ```bash
+    exec 200>"$LOCK_FILE"
+    flock -n 200 || exit 1
+    ```
+*   **Exclusion Guards:** The interceptor refuses to wipe system critical paths (e.g. `/`, `/usr`, `/var`), skips system directories safely, and protects pinned records from purge scripts.
+*   **Systemd Automation:** Three user timers run in the background:
+    1.  `trash-age.timer`: Evaluates, increments daily storage ages, and applies notifications.
+    2.  `trash-clean.timer`: Automates cleanup of non-pinned, aging files safely.
+    3.  `trash-notify.timer`: Alerts user when trash sizes exceed safety parameters.
+
+---
+
+## 🚀 Installation Guide
+
+### 📋 Prerequisites
+
+Ensure you have a freshly installed Arch Linux machine with base tools.
+```bash
+sudo pacman -S --needed git base-devel stow
 ```
 
 ---
 
-### 4.2 Deduplication
+### 📥 1. Automated Setup (Recommended)
 
-```
-mv -n tmp dest
+Our main script automates hardware checks, installs all dependencies, configures repositories, and hooks system variables seamlessly.
+
+```bash
+# Clone the repository to your home folder
+git clone https://github.com/AdityaAgrawal08/My-Arch-Linux-Configurations.git ~/dotfiles
+cd ~/dotfiles
+
+# Launch the orchestrator
+./install.sh
 ```
 
-* If exists → reuse
-* Else → create
+#### 🛡️ What `install.sh` performs behind the scenes:
+1.  Downloads core utility packages (e.g., Stow, Pacman wrappers).
+2.  Runs environment sensing (`detect.sh`) to log custom variables.
+3.  Invokes profile compiler (`reconcile.sh`) using the custom manifests.
+4.  Installs all Pacman dependencies and provisions `paru` as the AUR helper.
+5.  Applies GNU Stow links to set up directories dynamically.
+6.  Enables audio support (`pipewire`, `wireplumber`) and initializes systemd trash timers.
+7.  Deploys Neovim Lua folders and configures the default shell to Fish.
 
 ---
 
-## 5. Commands
+### 📦 2. Manual Custom Stow Setup (Alternative)
 
----
+If you prefer to configure your environment selectively, you can install GNU Stow and symlink packages manually:
 
-### 5.1 Delete (safe-rm)
+```bash
+sudo pacman -S stow
 
-```
-rm file
-```
-
-Flow:
-
-1. hash file
-2. move to temp
-3. CAS placement
-4. DB insert
-5. rollback on failure
-
----
-
-### 5.2 List
-
-```
-trash list
-```
-
----
-
-### 5.3 Restore
-
-```
-trash restore <id>
-```
-
-Flow:
-
-1. fetch DB
-2. resolve object
-3. verify hash
-4. restore file
-5. mark restored
-
----
-
-### 5.4 Delete (permanent)
-
-```
-trash delete <id>
-trash delete 1-5
-```
-
-* pinned → blocked
-* range → skips pinned
-
----
-
-### 5.5 Clear
-
-```
-trash clear
-```
-
-Deletes everything:
-
-* DB entries
-* CAS objects
-
----
-
-### 5.6 Pin / Unpin
-
-```
-trash pin <id>
-trash unpin <id>
-```
-
-Pinned items:
-
-* cannot be deleted
-* not cleaned automatically
-
----
-
-### 5.7 Cleanup (systemd)
-
-```
-trash cleanup 100
-```
-
-Deletes:
-
-* unpinned
-* older than N days
-
----
-
-### 5.8 Scan (GC)
-
-```
-trash scan
-```
-
-Removes orphan objects:
-
-```
-if object not referenced in DB → delete
+cd ~/dotfiles
+# Individual component stowing
+stow hypr
+stow waybar
+stow fish
+stow nvim
+stow starship
+stow wofi
+stow zathura
+stow trash
 ```
 
 ---
 
-### 5.9 Health
+## ⚡ Customization
 
-```
-trash health
-```
+To tailor components to your personal preferences, modify the following directories:
 
-Checks:
-
-* DB integrity
-* object store
+*   **Hyprland Rules:** Modify [hypr/.config/hypr/hyprland.conf](file:///home/aditya/dotfiles/hypr/.config/hypr/hyprland.conf) for hotkeys and layout options.
+*   **Waybar Styling:** Edit [waybar/.config/waybar/config.jsonc](file:///home/aditya/dotfiles/waybar/.config/waybar/config.jsonc) and [style.css](file:///home/aditya/dotfiles/waybar/.config/waybar/style.css).
+*   **Fish Shortcuts:** Customize [fish/.config/fish/config.fish](file:///home/aditya/dotfiles/fish/.config/fish/config.fish) to append custom variables and aliases.
+*   **Terminal Prompt:** Modify [starship/.config/starship.toml](file:///home/aditya/dotfiles/starship/.config/starship.toml).
 
 ---
 
-## 6. Consistency Model
+## 🔍 Troubleshooting
 
-```
-DB = source of truth
-CAS = storage
-```
+### 🖼️ Hyprland Core Start-Up Issues
+*   Check if correct graphics drivers are installed for your detected GPU type (inspect `state/env.json`).
+*   Check instance log files for exceptions:
+    ```bash
+    cat /tmp/hypr/$HYPRLAND_INSTANCE_SIGNATURE/hyprland.log
+    ```
 
----
+### 🔊 Trash System Locks & Restores
+*   If a process hangs, check active filesystem locks:
+    ```bash
+    ls -l ~/.local/share/trash-system/db/trash.db.lock
+    ```
+*   If object verification failures occur, run a complete diagnostic sweep:
+    ```bash
+    trash health
+    trash scan
+    ```
 
-### Valid State
-
-```
-DB entry exists → object exists
-```
-
----
-
-### Orphan State
-
-```
-object exists, DB missing → removed by scan
-```
-
----
-
-### Broken State
-
-```
-DB exists, object missing → restore fails
-```
-
----
-
-## 7. Concurrency
-
-Locking:
-
-```
-exec 200>"$LOCK"
-flock -n 200
-```
-
-Guarantee:
-
-* single writer
-* no race conditions
-
----
-
-## 8. SQLite Configuration
-
-```sql
-PRAGMA journal_mode=WAL;
-PRAGMA synchronous=FULL;
-PRAGMA foreign_keys=ON;
-```
-
----
-
-## 9. Systemd
-
-### Timer
-
-```
-trash-cleanup.timer
-```
-
-### Service
-
-```
-ExecStart=trash cleanup 100
-```
-
----
-
-## 10. Shell Integration
-
-Fish function:
-
-```
-files → safe-rm
-directories → rm
-recursive → bypass
-```
-
----
-
-## 11. Repo Structure
-
-```
-trash/
-├── bin/
-├── scripts/
-├── config/
-├── systemd/
-├── install.sh
-└── uninstall.sh
-```
-
----
-
-## 12. .gitignore
-
-```
-.local/share/trash-system/
-*.db
-*.db-wal
-*.db-shm
-*.db.lock
-objects/
-```
-
----
-
-## 13. Failure Handling
-
-| Case       | Behavior |
-| ---------- | -------- |
-| DB failure | rollback |
-| corruption | abort    |
-| lock fail  | exit     |
-
----
-
-## 14. Safety Rules
-
-* protects system paths
-* prevents overwrite
-* skips directories
-* enforces pin
-
----
-
-## 15. Limitations
-
-* no recovery without DB
-* full hashing cost
-* single writer
-* no versioning
-
----
-
-## 16. Future Enhancements
-
-* force restore
-* compression
-* logging
-* chunk hashing
-
----
-
-## 17. Final Guarantees
-
-* no accidental loss
-* deduplicated storage
-* crash-safe
-* consistent state
-* reproducible setup
-
----
-
-## Final Statement
-
-This system is a:
-
-```
-CAS + SQLite + WAL + Locking + GC + Systemd
-```
-
-based trash architecture that is:
-
-* consistent
-* durable
-* production-grade
-* fully operational
-
+### 🔡 Missing Nerd Fonts or Broken Symbols
+*   Verify your font cache is up to date:
+    ```bash
+    sudo pacman -S ttf-jetbrains-mono-nerd ttf-nerd-fonts-symbols-common
+    fc-cache -fv
+    ```
