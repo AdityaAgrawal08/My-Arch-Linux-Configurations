@@ -1,1 +1,3 @@
 width=800 height=600 location=center show=drun prompt=Search... allow_markup=true no_actions=true halign=fill orientation=vertical content_halign=fill
+no_sort=true
+matching=none
