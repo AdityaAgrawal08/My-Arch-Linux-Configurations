@@ -1,10 +1,12 @@
 ZEN="/opt/zen-browser-bin/zen-bin"
 BRAVE="/usr/bin/brave"
+FIREFOX="/usr/bin/firefox"
 
-choice=$(printf "Zen\nBrave" | wofi --dmenu --prompt="Choose browser: ")
+choice=$(printf "Zen\nBrave\nFirefox" | wofi --dmenu --prompt="Choose browser: ")
 
 case "$choice" in
-    Zen) env MOZ_ENABLE_WAYLAND=1 "$ZEN" & ;;
+    Zen) "$ZEN" & ;;
     Brave) "$BRAVE" & ;;
+    Firefox) "$FIREFOX" & ;;
 esac
 
