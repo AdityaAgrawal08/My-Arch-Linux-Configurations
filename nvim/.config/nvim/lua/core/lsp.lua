@@ -4,6 +4,10 @@ M.on_attach = function(client, bufnr)
   local map = vim.keymap.set
   local opts = { buffer = bufnr, silent = true }
 
+  if client.name == "ts_ls" then
+    client.server_capabilities.documentFormattingProvider = false
+  end
+
   -- LSP keymaps
   map("n", "gd", vim.lsp.buf.definition, opts)
   map("n", "gr", vim.lsp.buf.references, opts)
@@ -16,9 +20,9 @@ M.on_attach = function(client, bufnr)
   end, opts)
 
   -- Example: disable formatting for some servers if needed
-  -- if client.name == "tsserver" then
-  --   client.server_capabilities.documentFormattingProvider = false
-  -- end
+  if client.name == "tsserver" then
+    client.server_capabilities.documentFormattingProvider = false
+  end
 end
 
 return M

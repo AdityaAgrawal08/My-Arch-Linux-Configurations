@@ -21,6 +21,8 @@ map("n", "<C-Right>", "<cmd>vertical resize +2<CR>", { desc = "Increase window w
 
 -- Clear search highlight
 map("n", "<leader>h", "<cmd>nohlsearch<CR>", { desc = "Clear search highlight" })
+-- Double Esc to clear search highlight
+map("n", "<Esc><Esc>", "<cmd>nohlsearch<CR>", { desc = "Clear search highlight" })
 
 -- Buffer navigation
 map("n", "]b", "<cmd>bnext<CR>", { desc = "Next buffer" })
@@ -28,8 +30,14 @@ map("n", "[b", "<cmd>bprevious<CR>", { desc = "Previous buffer" })
 map("n", "<leader>bd", "<cmd>bdelete<CR>", { desc = "Delete buffer" })
 
 -- Diagnostic navigation
-map("n", "]d", vim.diagnostic.goto_next, { desc = "Next diagnostic" })
-map("n", "[d", vim.diagnostic.goto_prev, { desc = "Previous diagnostic" })
+map("n", "]d", function()
+  vim.diagnostic.jump({ count = 1, float = true })
+end, { desc = "Next diagnostic" })
+
+map("n", "[d", function()
+  vim.diagnostic.jump({ count = -1, float = true })
+end, { desc = "Previous diagnostic" })
+
 map("n", "<leader>e", vim.diagnostic.open_float, { desc = "Show diagnostic float" })
 
 -- Better indenting (stay in visual mode)
