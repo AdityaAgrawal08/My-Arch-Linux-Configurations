@@ -4,5 +4,5 @@
 if pgrep -x "hyprsunset" >/dev/null; then
     killall hyprsunset
 else
-    hyprsunset -t 2000
+    hyprsunset -t 3000
 fi
