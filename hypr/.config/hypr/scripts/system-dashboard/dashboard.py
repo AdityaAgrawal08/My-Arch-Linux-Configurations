@@ -328,12 +328,18 @@ class CircularProgress(Gtk.DrawingArea):
         super().__init__()
         self.label_text = label_text
         self.value = 0.0
+        self.charging = False
         self.set_draw_func(self.draw)
         self.set_size_request(42, 55)
 
     def set_value(self, value):
         self.value = max(0.0, min(1.0, value))
         self.queue_draw()
+
+    def set_charging(self, charging):
+        if self.charging != charging:
+            self.charging = charging
+            self.queue_draw()
 
     def draw(self, drawing_area, cr, width, height):
         cx = width / 2.0
@@ -349,7 +355,12 @@ class CircularProgress(Gtk.DrawingArea):
 
         # Draw active progress arc
         if self.value > 0:
-            cr.set_source_rgb(245/255, 176/255, 65/255)
+            if self.label_text == "BAT" and self.value <= 0.20:
+                cr.set_source_rgb(231/255, 76/255, 60/255) # Soft Red when battery <= 20%
+            elif self.label_text == "BAT" and self.charging:
+                cr.set_source_rgb(46/255, 204/255, 113/255) # Emerald Green when charging
+            else:
+                cr.set_source_rgb(245/255, 176/255, 65/255) # Amber Yellow otherwise
             cr.set_line_width(thickness)
             cr.set_line_cap(cairo.LINE_CAP_ROUND)
             start_angle = -math.pi / 2.0
@@ -370,15 +381,16 @@ class CircularProgress(Gtk.DrawingArea):
         cr.show_text(pct_text)
 
         # Center label below circle
+        lbl = self.label_text + "⚡" if (self.label_text == "BAT" and self.charging) else self.label_text
         cr.select_font_face("JetBrainsMono Nerd Font", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
         cr.set_font_size(7.5)
         cr.set_source_rgb(160/255, 174/255, 192/255)
         
-        te_lbl = cr.text_extents(self.label_text)
+        te_lbl = cr.text_extents(lbl)
         lx = cx - (te_lbl.x_bearing + te_lbl.width / 2.0)
         ly = 45.0 - (te_lbl.y_bearing + te_lbl.height / 2.0)
         cr.move_to(lx, ly)
-        cr.show_text(self.label_text)
+        cr.show_text(lbl)
 
 
 class HeightAnimator:
@@ -648,11 +660,11 @@ class DashboardWindow(Gtk.Window):
         
         self.ring_cpu = CircularProgress("CPU")
         self.ring_ram = CircularProgress("RAM")
-        self.ring_swap = CircularProgress("SWAP")
+        self.ring_bat = CircularProgress("BAT")
         
         rings_box.append(self.ring_cpu)
         rings_box.append(self.ring_ram)
-        rings_box.append(self.ring_swap)
+        rings_box.append(self.ring_bat)
         self.compact_card.append(rings_box)
 
         # Add compact_card to overlay
@@ -1052,7 +1064,18 @@ class DashboardWindow(Gtk.Window):
         self.mem_val.set_label(f"{mem_data.get('utilization')}%  ({to_gb(mem_data.get('used')):.1f}/{to_gb(mem_data.get('total')):.1f} GB)")
         self.mem_bar.set_value(mem_data.get('utilization') / 100.0)
         self.ring_ram.set_value(mem_data.get('utilization') / 100.0)
-        self.ring_swap.set_value(mem_data.get('swap_utilization', 0.0) / 100.0)
+        
+        # Battery Ring
+        bat_data = data["battery"]
+        if bat_data.get("present"):
+            pct = bat_data.get('percentage', 0)
+            status = bat_data.get('status', '')
+            is_charging = "charging" in status.lower()
+            self.ring_bat.set_value(pct / 100.0)
+            self.ring_bat.set_charging(is_charging)
+        else:
+            self.ring_bat.set_value(0.0)
+            self.ring_bat.set_charging(False)
         
         # GPU
         gpu_data = data["gpu"]
