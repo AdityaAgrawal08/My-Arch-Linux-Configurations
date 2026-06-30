@@ -3,6 +3,7 @@
   "height": 2,
   "spacing": 4,
   "modules-left": [
+    "custom/dashboard",
     "hyprland/workspaces",
     "sway/mode",
     "sway/scratchpad",
@@ -182,5 +183,10 @@
     "interval": 5,
     "on-click": "blueman-manager",
     "tooltip": true
+  },
+  "custom/dashboard": {
+    "format": "󰕮",
+    "on-click": "~/.config/hypr/scripts/system-dashboard.sh",
+    "tooltip": false
   }
 }

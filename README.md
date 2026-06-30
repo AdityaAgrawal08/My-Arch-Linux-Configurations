@@ -84,6 +84,19 @@ Bundled under `.local/bin` are custom standalone scripts backed by modular Pytho
 *   `pdf2docx`: Precise layout-preserving PDF to Microsoft Word converter.
 *   `pdfmerge`: High-fidelity PDF report compilation utility.
 
+### 🎛️ System Dashboard Widget
+A high-performance **GTK4/PyGObject** status panel running as a lightweight quick-settings overlay anchored to the top-right corner of the screen:
+*   **Persistent Daemon:** The application runs as a single-instance background daemon (`com.system.dashboard`). Spawning it (via Waybar or `SUPER + I`) toggles window visibility instantly (`0ms` delay) by showing/hiding the persistent window instead of starting new processes.
+*   **Adaptive CPU Polling:** Automatically monitors its own CPU usage. Under heavy system loads (>5.0% CPU for 15 seconds), it pauses background metrics collection and displays a warning card, automatically resuming once CPU usage drops below 2.0%.
+*   **Interactive Controls:**
+    *   **Sliders:** Volume (`wpctl`) and Brightness (`brightnessctl`) with a 1.0-second user-interaction lockout to prevent slider fighting.
+    *   **Segmented Power Modes:** A dedicated card with a **Segmented Button Control** to switch between `Power Saver`, `Balanced`, and `Performance` profiles (`powerprofilesctl`).
+    *   **Focus Mode:** A Pomodoro timer (1-180 min) that sends a critical desktop notification (`notify-send`) immediately upon completion.
+*   **Information-Dense Tabs:**
+    *   *Stats:* Real-time hardware utilization (CPU, RAM, GPU, Disk) and network details (IP, SSID, MAC, DNS, and Ping latency).
+    *   *Manage:* Process explorer and real-time system log reader (`journalctl`).
+*   **Compositor Integration:** Uses `hyprctl` to dynamically query monitor scaling and coordinates, ensuring the window is positioned exactly in the top-right corner with a `24px` margin, pinned (`pin`) across all workspaces, and decorated with a tight window border.
+
 ---
 
 ## 🗑️ CAS Trash Management System
@@ -269,6 +282,62 @@ To tailor components to your personal preferences, modify the following director
 *   **Waybar Styling:** Edit [waybar/.config/waybar/config.jsonc](file:///home/aditya/dotfiles/waybar/.config/waybar/config.jsonc) and [style.css](file:///home/aditya/dotfiles/waybar/.config/waybar/style.css).
 *   **Fish Shortcuts:** Customize [fish/.config/fish/config.fish](file:///home/aditya/dotfiles/fish/.config/fish/config.fish) to append custom variables and aliases.
 *   **Terminal Prompt:** Modify [starship/.config/starship.toml](file:///home/aditya/dotfiles/starship/.config/starship.toml).
+
+---
+
+## 🛠️ System Dashboard Development Guide
+
+If you want to maintain, modify, or replicate this system dashboard widget in the future, follow this architectural blueprint.
+
+### 1. Architecture Overview
+The dashboard is split into two clean Python files located in `hypr/.config/hypr/scripts/system-dashboard/`:
+1.  **`collectors.py` (Backend):** Contains independent, thread-safe data collector classes (e.g., `CPUCollector`, `NetworkCollector`, `BatteryCollector`). They handle low-level file reading (e.g., `/proc/stat`, `/sys/class/net/`) or process spawning (`journalctl`, `nmcli`) to fetch system state.
+2.  **`dashboard.py` (Frontend):** A GTK4 application (`Gtk.Application`) that builds the user interface, manages style sheets, handles user events, and runs a background thread to poll data and update the UI via `GLib.idle_add` (crucial for thread safety in GTK).
+
+### 2. Core Design Patterns to Maintain
+
+#### A. Thread-Safe UI Updates
+Never update GTK widgets directly from a background thread. Always collect data in a background thread, and then schedule the UI update on the main GTK thread using `GLib.idle_add`:
+```python
+def background_worker():
+    data = collector.get_data()
+    GLib.idle_add(apply_data_to_widgets, data)
+```
+
+#### B. Single-Instance Show/Hide Toggle
+To make the widget feel instant, the window is kept alive in the background:
+1.  **Override Close Signal:** Intercept the `close-request` signal on the window and return `True` to hide it instead of destroying it:
+    ```python
+    def _on_close_request(self, window):
+        self.hide()
+        return True
+    ```
+2.  **Toggle on Activate:** The `Gtk.Application` uses a unique application ID (`com.system.dashboard`). When a second instance is launched, GTK's native IPC activates the primary instance instead of running a new process. We toggle window visibility in `do_activate`:
+    ```python
+    def do_activate(self):
+        if self.window.is_visible():
+            self.window.hide()
+        else:
+            self.window.present()
+            self.window.position_window()
+    ```
+
+#### C. Wayland Positioning via Hyprland IPC
+Under Wayland, windows cannot set their own absolute screen coordinates. We bypass this limitation by using Hyprland's IPC (`hyprctl`):
+1.  Get the focused monitor's dimensions and scale: `hyprctl monitors -j`.
+2.  Calculate target coordinates in logical pixels: `target_x = (width / scale) - win_width - margin`.
+3.  Move, resize, and pin the window using a brief delay to allow the window to map:
+    ```python
+    subprocess.run(["hyprctl", "dispatch", "resizewindowpixel", "exact 380 590,class:com.system.dashboard"])
+    subprocess.run(["hyprctl", "dispatch", "movewindowpixel", f"exact {x} {y},class:com.system.dashboard"])
+    subprocess.run(["hyprctl", "dispatch", "pin", "class:com.system.dashboard"])
+    ```
+
+#### D. GTK4 CSS Styling without Warnings
+*   GTK's CSS engine (`Gtk.CssProvider`) is a subset of web CSS.
+*   **No trailing comments:** Never put comments like `/* ... */` on the same line as a property (e.g. `color: red; /* comment */` will fail to parse).
+*   **No `!important`:** Do not use `!important`. Instead, increase selector specificity (e.g. `button.profile-btn.active` instead of `.active`) to override default Adwaita theme styling.
+*   **Gradients & Backgrounds:** Standard GTK buttons use background gradients. To apply a solid background color, you must clear the gradient first: `background-image: none; background-color: #color;`.
 
 ---
 
