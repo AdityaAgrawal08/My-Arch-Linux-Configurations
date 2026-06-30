@@ -5,11 +5,14 @@ import time
 import subprocess
 import threading
 import json
+import math
 
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Gdk', '4.0')
-from gi.repository import Gtk, Gdk, Gio, GLib, Pango
+gi.require_version('Gtk4LayerShell', '1.0')
+from gi.repository import Gtk, Gdk, Gio, GLib, Pango, Gtk4LayerShell
+import cairo
 
 # Import collectors
 from collectors import (
@@ -44,68 +47,98 @@ ports_coll = PortsCollector()
 # Custom CSS for the premium warm yellow/sand theme
 CSS_DATA = """
 window {
-    background-color: #f5b041;
+    background-color: transparent;
 }
 
 .main-card {
-    background-color: #f5b041;
-    color: #2c3e50;
+    background-color: #121214;
+    color: #e2e8f0;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* Explicitly style all labels to ensure they are visible on dark background */
+label {
+    color: #e2e8f0;
+    font-size: 11px;
+}
+
+label.sub-text {
+    color: #a0aec0;
+    font-size: 10px;
+}
+
+label.bold-text {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 11px;
+}
+
+label.card-title {
+    color: #a0aec0;
+    font-size: 10px;
 }
 
 .card {
-    background-color: #f8c471;
-    border-radius: 16px;
-    padding: 16px;
-    margin: 8px 12px;
-    border: 1px solid rgba(0, 0, 0, 0.02);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    background-color: #1e1e24;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin: 4px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
 .warning-card {
-    background-color: #f2d7d5;
-    border: 1px solid #f1948a;
-    color: #78281f;
+    background-color: #2d1f1f;
+    border: 1px solid #78281f;
+    padding: 8px 12px;
+}
+
+.warning-card label {
+    color: #f1948a;
 }
 
 .card-title {
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 800;
-    color: #5d4037;
+    color: #a0aec0;
     text-transform: uppercase;
     letter-spacing: 0.8px;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
 .clock-time {
-    font-size: 42px;
+    font-size: 30px;
     font-weight: 800;
-    color: #1a1a1a;
-    letter-spacing: -1.5px;
+    color: #ffffff;
+    letter-spacing: -1px;
 }
 
 .clock-date {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 500;
-    color: #5d4037;
+    color: #a0aec0;
 }
 
 scale trough {
-    min-height: 6px;
-    border-radius: 3px;
-    background-color: rgba(0, 0, 0, 0.08);
+    min-height: 4px;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 scale highlight {
-    border-radius: 3px;
-    background-color: #2e4053;
+    border-radius: 2px;
+    background-color: #f5b041;
 }
 
 scale slider {
-    min-width: 14px;
-    min-height: 14px;
-    margin: -4px 0;
+    min-width: 10px;
+    min-height: 10px;
+    margin: -3px 0;
     border-radius: 50%;
-    background-color: #2e4053;
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
     transition: transform 0.1s ease;
 }
 
@@ -114,29 +147,30 @@ scale slider:hover {
 }
 
 levelbar trough {
-    min-height: 6px;
-    border-radius: 3px;
-    background-color: rgba(0, 0, 0, 0.08);
+    min-height: 4px;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 levelbar block {
-    border-radius: 3px;
-    background-color: #2e4053;
+    border-radius: 2px;
+    background-color: #f5b041;
 }
 
 button {
-    background-color: rgba(255, 255, 255, 0.25);
-    border: 1px solid rgba(0, 0, 0, 0.04);
-    border-radius: 10px;
-    padding: 6px 12px;
-    color: #1a1a1a;
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    padding: 4px 8px;
+    color: #e2e8f0;
     font-weight: 600;
-    font-size: 13px;
+    font-size: 11px;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 button:hover {
-    background-color: rgba(255, 255, 255, 0.45);
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
     transform: translateY(-1px);
 }
 
@@ -146,52 +180,77 @@ button:active {
 
 button.close-btn {
     background-image: none;
-    background-color: rgba(0, 0, 0, 0.1);
-    color: #5d4037;
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #a0aec0;
     border: none;
     border-radius: 9999px;
-    min-width: 28px;
-    min-height: 28px;
-    max-width: 28px;
-    max-height: 28px;
+    min-width: 22px;
+    min-height: 22px;
     padding: 0;
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 700;
     transition: all 0.2s ease;
 }
 
 button.close-btn:hover {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
     transform: scale(1.1);
 }
 
 button.profile-btn {
     background-image: none;
-    background-color: rgba(255, 255, 255, 0.2);
-    color: #5d4037;
+    background-color: rgba(255, 255, 255, 0.06);
+    color: #a0aec0;
     border: none;
-    border-radius: 10px;
-    padding: 8px 6px;
+    border-radius: 8px;
+    padding: 6px 4px;
     font-weight: 700;
-    font-size: 11px;
+    font-size: 9.5px;
 }
 
 button.profile-btn:hover {
     background-image: none;
-    background-color: rgba(255, 255, 255, 0.35);
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
 }
 
 button.profile-btn.active {
     background-image: none;
-    background-color: #2e4053;
+    background-color: #f5b041;
+    color: #121214;
+    box-shadow: 0 2px 6px rgba(245, 176, 65, 0.3);
+}
+
+/* Custom styling for SpinButton in dark mode */
+spinbutton {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 1px 4px;
+}
+
+spinbutton, spinbutton text, spinbutton entry {
+    color: #ffffff !important;
+    background-color: transparent;
+}
+
+spinbutton button {
+    background-color: transparent;
+    border: none;
+    color: #a0aec0;
+    padding: 1px 4px;
+}
+
+spinbutton button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
     color: #ffffff;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .nav-bar {
-    background-color: #eb984e;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-    padding: 10px 16px;
+    background-color: #18181c;
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+    padding: 6px 12px;
 }
 
 .nav-btn {
@@ -199,34 +258,34 @@ button.profile-btn.active {
     background-image: none;
     border: none;
     box-shadow: none;
-    color: #5d4037;
-    font-size: 14px;
+    color: #a0aec0;
+    font-size: 11px;
     font-weight: 700;
-    padding: 8px 16px;
-    border-radius: 12px;
+    padding: 6px 12px;
+    border-radius: 8px;
 }
 
 .nav-btn:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-    color: #1a1a1a;
+    background-color: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
 }
 
 .nav-btn.active {
-    background-color: #2e4053;
+    background-color: #f5b041;
     background-image: none;
-    color: #ffffff;
+    color: #121214;
     border: none;
-    box-shadow: none;
+    box-shadow: 0 2px 6px rgba(245, 176, 65, 0.2);
 }
 
 .list-item {
-    padding: 6px 8px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    padding: 4px 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .mono-text {
     font-family: 'JetBrainsMono Nerd Font', monospace;
-    font-size: 11px;
+    font-size: 9.5px;
 }
 
 .bold-text {
@@ -234,29 +293,154 @@ button.profile-btn.active {
 }
 
 .sub-text {
-    font-size: 11px;
-    color: #5d4037;
+    font-size: 9.5px;
+    color: #a0aec0;
 }
 
 scrollbar trough {
     background-color: transparent;
 }
 scrollbar slider {
-    background-color: rgba(0, 0, 0, 0.15);
-    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.compact-card {
+    background-color: #1e1e24;
+    border-radius: 12px;
+    padding: 8px 12px;
+    margin: 0;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+label.arch-logo {
+    font-size: 28px;
+    color: #1793d1;
+    margin-left: 4px;
+    font-weight: bold;
 }
 """
 
-class DashboardWindow(Gtk.ApplicationWindow):
+
+class CircularProgress(Gtk.DrawingArea):
+    def __init__(self, label_text):
+        super().__init__()
+        self.label_text = label_text
+        self.value = 0.0
+        self.set_draw_func(self.draw)
+        self.set_size_request(42, 55)
+
+    def set_value(self, value):
+        self.value = max(0.0, min(1.0, value))
+        self.queue_draw()
+
+    def draw(self, drawing_area, cr, width, height):
+        cx = width / 2.0
+        cy = 22.0
+        radius = 15.0
+        thickness = 3.0
+
+        # Draw background track
+        cr.set_source_rgba(255/255, 255/255, 255/255, 0.08)
+        cr.set_line_width(thickness)
+        cr.arc(cx, cy, radius, 0, 2 * math.pi)
+        cr.stroke()
+
+        # Draw active progress arc
+        if self.value > 0:
+            cr.set_source_rgb(245/255, 176/255, 65/255)
+            cr.set_line_width(thickness)
+            cr.set_line_cap(cairo.LINE_CAP_ROUND)
+            start_angle = -math.pi / 2.0
+            end_angle = start_angle + (2 * math.pi * self.value)
+            cr.arc(cx, cy, radius, start_angle, end_angle)
+            cr.stroke()
+
+        # Center percentage value
+        pct_text = f"{int(self.value * 100)}"
+        cr.select_font_face("JetBrainsMono Nerd Font", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+        cr.set_font_size(8)
+        cr.set_source_rgb(255/255, 255/255, 255/255)
+        
+        te = cr.text_extents(pct_text)
+        tx = cx - (te.x_bearing + te.width / 2.0)
+        ty = cy - (te.y_bearing + te.height / 2.0)
+        cr.move_to(tx, ty)
+        cr.show_text(pct_text)
+
+        # Center label below circle
+        cr.select_font_face("JetBrainsMono Nerd Font", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+        cr.set_font_size(7.5)
+        cr.set_source_rgb(160/255, 174/255, 192/255)
+        
+        te_lbl = cr.text_extents(self.label_text)
+        lx = cx - (te_lbl.x_bearing + te_lbl.width / 2.0)
+        ly = 45.0 - (te_lbl.y_bearing + te_lbl.height / 2.0)
+        cr.move_to(lx, ly)
+        cr.show_text(self.label_text)
+
+
+class HeightAnimator:
+    def __init__(self, window, start_h, end_h, duration_ms, on_step, on_complete):
+        self.window = window
+        self.start_h = start_h
+        self.end_h = end_h
+        self.duration = duration_ms / 1000.0
+        self.on_step = on_step
+        self.on_complete = on_complete
+        self.start_time = time.time()
+        self.timer_id = GLib.timeout_add(10, self.step)
+
+    def step(self):
+        elapsed = time.time() - self.start_time
+        if elapsed >= self.duration:
+            self.on_step(self.end_h, 1.0)
+            self.on_complete()
+            self.timer_id = None
+            return False
+            
+        t = elapsed / self.duration
+        # cubic ease-out
+        t_eased = 1.0 - (1.0 - t) ** 3
+        current_h = int(self.start_h + (self.end_h - self.start_h) * t_eased)
+        self.on_step(current_h, t_eased)
+        return True
+
+    def cancel(self):
+        if self.timer_id:
+            GLib.source_remove(self.timer_id)
+            self.timer_id = None
+
+
+class DashboardWindow(Gtk.Window):
     def __init__(self, app):
-        super().__init__(application=app)
+        super().__init__()
+        self.set_application(app)
         self.set_title("System Dashboard")
         
-        # Enforce exact window size request (no margins, fits card perfectly)
-        self.set_default_size(380, 590)
-        self.set_size_request(380, 590)
-        self.set_resizable(False)
-        self.set_decorated(False)
+        # Force native Dark Mode
+        settings = Gtk.Settings.get_default()
+        settings.set_property("gtk-application-prefer-dark-theme", True)
+        
+        # Initialize Layer Shell
+        Gtk4LayerShell.init_for_window(self)
+        Gtk4LayerShell.set_layer(self, Gtk4LayerShell.Layer.TOP)
+        
+        # KeyboardMode.NONE prevents the window from ever taking keyboard focus.
+        # This makes it completely immune to SUPER+Q.
+        Gtk4LayerShell.set_keyboard_mode(self, Gtk4LayerShell.KeyboardMode.NONE)
+        
+        # Anchor to Top and Left to allow precise positioning under Waybar
+        Gtk4LayerShell.set_anchor(self, Gtk4LayerShell.Edge.TOP, True)
+        Gtk4LayerShell.set_anchor(self, Gtk4LayerShell.Edge.LEFT, True)
+        
+        # Spacing from top (Waybar is typically ~30px height, so 38px puts it right below)
+        Gtk4LayerShell.set_margin(self, Gtk4LayerShell.Edge.TOP, 38)
+        
+        # Set initial size request
+        self.set_default_size(380, 75)
+        self.set_size_request(380, 75)
 
         self.vol_handler_id = None
         self.bright_handler_id = None
@@ -294,12 +478,23 @@ class DashboardWindow(Gtk.ApplicationWindow):
         # Memory Cache for metrics
         self.cached_data = None
 
+        # Hover-to-expand state
+        self.is_expanded = False
+        self.is_expanding = False
+        self.animator = None
+        self.collapse_timer_id = None
+        self.is_active_mode = False
+
         self._build_ui()
         
-        # Connect focus & close events
-        self.connect("notify::is-active", self._on_focus_changed)
         self.connect("close-request", self._on_close_request)
         
+        # Setup Hover Event Controller on the Window
+        motion_controller = Gtk.EventControllerMotion()
+        motion_controller.connect("enter", self._on_mouse_enter)
+        motion_controller.connect("leave", self._on_mouse_leave)
+        self.add_controller(motion_controller)
+
         # Start background slider thread
         threading.Thread(target=self._slider_polling_worker, daemon=True).start()
         
@@ -308,18 +503,30 @@ class DashboardWindow(Gtk.ApplicationWindow):
         
         # Start initial updates (active state)
         self._setup_polling(active=True)
+        
+        # Setup initial position
+        self.update_position()
 
     def _build_ui(self):
-        # Main Card (direct child of the window to let Hyprland borders hug it)
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-        main_box.add_css_class("main-card")
-        self.set_child(main_box)
+        # Create a Gtk.Overlay as the root child
+        overlay = Gtk.Overlay()
+        # CRITICAL: Prevent the overlay container from expanding to fill the screen
+        overlay.set_valign(Gtk.Align.START)
+        overlay.set_halign(Gtk.Align.START)
+        self.set_child(overlay)
 
-        # 1. FIXED HEADER
+        # 1. MAIN BOX (Full Dashboard)
+        self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        self.main_box.add_css_class("main-card")
+        self.main_box.set_visible(False) # Hidden initially
+        self.main_box.set_valign(Gtk.Align.START)
+        overlay.set_child(self.main_box)
+
+        # Build full dashboard elements inside main_box
+        # Header
         header_card = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         header_card.add_css_class("card")
         
-        # Left: Clock & Date
         clock_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1)
         self.time_label = Gtk.Label(label="00:00")
         self.time_label.add_css_class("clock-time")
@@ -333,7 +540,6 @@ class DashboardWindow(Gtk.ApplicationWindow):
         clock_box.append(self.date_label)
         header_card.append(clock_box)
         
-        # Right: User info & Close Button
         right_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         right_box.set_hexpand(True)
         right_box.set_halign(Gtk.Align.END)
@@ -352,18 +558,17 @@ class DashboardWindow(Gtk.ApplicationWindow):
         meta_box.append(self.meta_label)
         right_box.append(meta_box)
         
-        # Circular Close Button
         btn_close = Gtk.Button(label="×")
         btn_close.add_css_class("close-btn")
         btn_close.set_valign(Gtk.Align.CENTER)
         btn_close.set_halign(Gtk.Align.CENTER)
-        btn_close.connect("clicked", lambda x: self.hide())
+        btn_close.connect("clicked", lambda x: self.hide_popup())
         right_box.append(btn_close)
         
         header_card.append(right_box)
-        main_box.append(header_card)
+        self.main_box.append(header_card)
 
-        # 2. CPU WARNING CARD (Hidden by default)
+        # CPU Warning Card
         self.warning_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         self.warning_card.add_css_class("card")
         self.warning_card.add_css_class("warning-card")
@@ -379,16 +584,15 @@ class DashboardWindow(Gtk.ApplicationWindow):
         
         self.warning_card.append(self.warning_title)
         self.warning_card.append(self.warning_text)
-        main_box.append(self.warning_card)
+        self.main_box.append(self.warning_card)
 
-        # 3. INTERACTIVE CONTENT STACK
+        # Content Stack
         self.stack = Gtk.Stack()
         self.stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
         self.stack.set_transition_duration(250)
         self.stack.set_vexpand(True)
-        main_box.append(self.stack)
+        self.main_box.append(self.stack)
 
-        # Create pages
         self._build_home_page()
         self._build_stats_page()
         self._build_manage_page()
@@ -397,7 +601,7 @@ class DashboardWindow(Gtk.ApplicationWindow):
         self.stack.add_titled(self.stats_page, "stats", "Stats")
         self.stack.add_titled(self.manage_page, "manage", "Manage")
 
-        # 4. BOTTOM NAVIGATION BAR
+        # Bottom Nav Bar
         self.nav_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.nav_box.add_css_class("nav-bar")
         self.nav_box.set_homogeneous(True)
@@ -418,14 +622,47 @@ class DashboardWindow(Gtk.ApplicationWindow):
         self.nav_box.append(self.btn_nav_home)
         self.nav_box.append(self.btn_nav_stats)
         self.nav_box.append(self.btn_nav_manage)
+        self.main_box.append(self.nav_box)
+
+        # 2. COMPACT CARD (Overlay Child)
+        self.compact_card = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        self.compact_card.add_css_class("compact-card")
+        self.compact_card.set_size_request(380, 75)
+        self.compact_card.set_valign(Gtk.Align.START)
+        self.compact_card.set_halign(Gtk.Align.START)
         
-        main_box.append(self.nav_box)
+        # Left side: Arch Logo
+        logo_label = Gtk.Label(label="󰣇")
+        logo_label.add_css_class("arch-logo")
+        logo_label.set_valign(Gtk.Align.CENTER)
+        self.compact_card.append(logo_label)
+
+        # Spacer
+        spacer = Gtk.Box()
+        spacer.set_hexpand(True)
+        self.compact_card.append(spacer)
+
+        # Right side: 3 Circular Progress Indicators
+        rings_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        rings_box.set_valign(Gtk.Align.CENTER)
+        
+        self.ring_cpu = CircularProgress("CPU")
+        self.ring_ram = CircularProgress("RAM")
+        self.ring_swap = CircularProgress("SWAP")
+        
+        rings_box.append(self.ring_cpu)
+        rings_box.append(self.ring_ram)
+        rings_box.append(self.ring_swap)
+        self.compact_card.append(rings_box)
+
+        # Add compact_card to overlay
+        overlay.add_overlay(self.compact_card)
 
     # PAGE BUILDERS
     def _build_home_page(self):
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scrolled.set_size_request(380, 480)
+        scrolled.set_size_request(380, 340)
         self.home_page = scrolled
 
         home_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
@@ -435,7 +672,6 @@ class DashboardWindow(Gtk.ApplicationWindow):
         sliders_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         sliders_card.add_css_class("card")
         
-        # Card Title
         s_title = Gtk.Label(label="System Settings")
         s_title.add_css_class("card-title")
         s_title.set_halign(Gtk.Align.START)
@@ -491,7 +727,7 @@ class DashboardWindow(Gtk.ApplicationWindow):
         bat_card.append(self.bat_sub_lbl)
         home_box.append(bat_card)
         
-        # Dedicated Power Mode Card (Segmented Control)
+        # Dedicated Power Mode Card
         power_mode_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         power_mode_card.add_css_class("card")
         
@@ -534,7 +770,7 @@ class DashboardWindow(Gtk.ApplicationWindow):
         timer_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         
         self.focus_time_label = Gtk.Label(label="25:00")
-        self.focus_time_label.set_markup("<span size='xx-large' weight='bold'>25:00</span>")
+        self.focus_time_label.set_markup("<span size='xx-large' weight='bold' foreground='#ffffff'>25:00</span>")
         self.focus_time_label.set_halign(Gtk.Align.START)
         
         adj = Gtk.Adjustment(value=25, lower=1, upper=180, step_increment=1, page_increment=5)
@@ -565,7 +801,7 @@ class DashboardWindow(Gtk.ApplicationWindow):
     def _build_stats_page(self):
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scrolled.set_size_request(380, 480)
+        scrolled.set_size_request(380, 340)
         self.stats_page = scrolled
         
         stats_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
@@ -633,7 +869,7 @@ class DashboardWindow(Gtk.ApplicationWindow):
         storage_card.append(self.storage_box)
         stats_box.append(storage_card)
         
-        # Network Card (Simplified & Compact Grid)
+        # Network Card
         net_card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         net_card.add_css_class("card")
         n_title = Gtk.Label(label="Network Info")
@@ -705,7 +941,7 @@ class DashboardWindow(Gtk.ApplicationWindow):
     def _build_manage_page(self):
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scrolled.set_size_request(380, 480)
+        scrolled.set_size_request(380, 340)
         self.manage_page = scrolled
         
         manage_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
@@ -738,14 +974,6 @@ class DashboardWindow(Gtk.ApplicationWindow):
         manage_box.append(logs_card)
 
     # DYNAMIC POLLING & FOCUS HANDLERS
-    def _on_focus_changed(self, window, pspec):
-        is_active = self.is_active()
-        if is_active:
-            self.slider_poll_interval = 0.15
-        else:
-            self.slider_poll_interval = 3.0
-        self._setup_polling(active=is_active)
-
     def _setup_polling(self, active=True, paused=False):
         if self.metrics_timer_id:
             GLib.source_remove(self.metrics_timer_id)
@@ -760,7 +988,7 @@ class DashboardWindow(Gtk.ApplicationWindow):
         if paused:
             return
 
-        if active:
+        if active or self.is_active_mode:
             self.metrics_timer_id = GLib.timeout_add(500, self._update_metrics_callback)
             self._trigger_async_metrics()
         else:
@@ -816,12 +1044,15 @@ class DashboardWindow(Gtk.ApplicationWindow):
         cpu_data = data["cpu"]
         self.cpu_val.set_label(f"{cpu_data.get('utilization')}%  ({cpu_data.get('frequency')} MHz)")
         self.cpu_bar.set_value(cpu_data.get('utilization') / 100.0)
+        self.ring_cpu.set_value(cpu_data.get('utilization') / 100.0)
         
         # Memory
         mem_data = data["memory"]
         to_gb = lambda b: b / (1024 * 1024 * 1024)
         self.mem_val.set_label(f"{mem_data.get('utilization')}%  ({to_gb(mem_data.get('used')):.1f}/{to_gb(mem_data.get('total')):.1f} GB)")
         self.mem_bar.set_value(mem_data.get('utilization') / 100.0)
+        self.ring_ram.set_value(mem_data.get('utilization') / 100.0)
+        self.ring_swap.set_value(mem_data.get('swap_utilization', 0.0) / 100.0)
         
         # GPU
         gpu_data = data["gpu"]
@@ -829,7 +1060,7 @@ class DashboardWindow(Gtk.ApplicationWindow):
         self.gpu_bar.set_value(gpu_data.get('utilization') / 100.0)
         self.gpu_sub_label.set_label(f"{gpu_data.get('model')}  |  {gpu_data.get('frequency', '')}")
         
-        # Battery (Dedicated card layout)
+        # Battery
         bat_data = data["battery"]
         if bat_data.get("present"):
             self.bat_lbl.set_label(f"🔋 {bat_data.get('percentage')}% ({bat_data.get('status')})")
@@ -838,14 +1069,14 @@ class DashboardWindow(Gtk.ApplicationWindow):
             self.bat_lbl.set_label("🔋 N/A")
             self.bat_sub_lbl.set_label("No battery detected")
             
-        # Power Profile (Title Case and Segmented Button group update)
+        # Power Profile
         profile = bat_data.get('profile', 'balanced')
         self._update_profile_buttons_ui(profile)
         
         # Storage
         self._update_storage_ui(data["storage"].get('drives', []))
         
-        # Network (Compact Grid)
+        # Network
         net_data = data["network"]
         self.net_iface_val.set_label(net_data.get('interface', '--'))
         self.net_ssid_val.set_label(net_data.get('wifi_ssid', '--'))
@@ -1046,7 +1277,7 @@ class DashboardWindow(Gtk.ApplicationWindow):
     def _update_focus_display(self):
         mins = self.focus_time_left // 60
         secs = self.focus_time_left % 60
-        self.focus_time_label.set_markup(f"<span size='xx-large' weight='bold'>{mins:02d}:{secs:02d}</span>")
+        self.focus_time_label.set_markup(f"<span size='xx-large' weight='bold' foreground='#ffffff'>{mins:02d}:{secs:02d}</span>")
 
     def _on_focus_start_clicked(self, btn):
         if self.focus_active:
@@ -1109,12 +1340,12 @@ class DashboardWindow(Gtk.ApplicationWindow):
             self.cpu_warning_val = cpu_usage
             self.cpu_warning_reason = f"High CPU utilisation ({cpu_usage:.1f}%)"
             
-            self._setup_polling(active=self.is_active(), paused=True)
+            self._setup_polling(active=self.is_visible(), paused=True)
             self._update_warning_ui()
             
         elif self.low_cpu_ticks >= 3 and self.cpu_warning_active:
             self.cpu_warning_active = False
-            self._setup_polling(active=self.is_active(), paused=False)
+            self._setup_polling(active=self.is_visible(), paused=False)
             self._update_warning_ui()
             
         return True
@@ -1227,57 +1458,132 @@ class DashboardWindow(Gtk.ApplicationWindow):
         self.slider_thread_running = False
 
     def _on_close_request(self, window):
-        self.hide()
+        self.hide_popup()
         return True
 
-    # Floating Positioning Helper
-    def position_window(self):
+    # Hover Handlers
+    def _on_mouse_enter(self, controller, x, y):
+        # Cancel pending collapse
+        if self.collapse_timer_id:
+            GLib.source_remove(self.collapse_timer_id)
+            self.collapse_timer_id = None
+
+        if self.is_expanded or self.is_expanding:
+            return
+
+        self.is_expanding = True
+        self.is_active_mode = True
+        
+        if self.animator:
+            self.animator.cancel()
+
+        self.main_box.set_visible(True)
+        self.main_box.set_opacity(0.0)
+
+        start_h = 75
+        end_h = 450
+
+        def on_step(h, t):
+            self.set_size_request(380, h)
+            self.compact_card.set_opacity(1.0 - t)
+            self.main_box.set_opacity(t)
+
+        def on_complete():
+            self.compact_card.set_visible(False)
+            self.is_expanded = True
+            self.is_expanding = False
+            self.animator = None
+
+        self.animator = HeightAnimator(self, start_h, end_h, 200, on_step, on_complete)
+
+    def _on_mouse_leave(self, controller):
+        if self.collapse_timer_id:
+            GLib.source_remove(self.collapse_timer_id)
+            
+        self.collapse_timer_id = GLib.timeout_add(350, self._trigger_collapse)
+
+    def _trigger_collapse(self):
+        self.collapse_timer_id = None
+
+        if not self.is_expanded and not self.is_expanding:
+            return
+
+        self.is_expanded = False
+        self.is_expanding = False
+        self.is_active_mode = False
+        
+        if self.animator:
+            self.animator.cancel()
+
+        self.compact_card.set_visible(True)
+        self.compact_card.set_opacity(0.0)
+
+        start_h = 450
+        end_h = 75
+
+        def on_step(h, t):
+            self.set_size_request(380, h)
+            self.compact_card.set_opacity(t)
+            self.main_box.set_opacity(1.0 - t)
+
+        def on_complete():
+            self.main_box.set_visible(False)
+            self.animator = None
+
+        self.animator = HeightAnimator(self, start_h, end_h, 200, on_step, on_complete)
+        return False
+
+    # Popup Toggle Interface
+    def show_popup(self):
+        self.is_expanded = False
+        self.is_expanding = False
+        self.set_size_request(380, 75)
+        self.compact_card.set_visible(True)
+        self.compact_card.set_opacity(1.0)
+        self.main_box.set_visible(False)
+        self.main_box.set_opacity(0.0)
+        
+        self.present()
+        self._setup_polling(active=True)
+
+    def hide_popup(self):
+        if self.collapse_timer_id:
+            GLib.source_remove(self.collapse_timer_id)
+            self.collapse_timer_id = None
+        if self.animator:
+            self.animator.cancel()
+            self.animator = None
+            
+        self.hide()
+        self._setup_polling(active=False)
+
+    # Position Calculator based on Active Monitor & Cursor Position
+    def update_position(self):
         try:
-            res = subprocess.run(["hyprctl", "monitors", "-j"], capture_output=True, text=True)
-            monitors = json.loads(res.stdout)
+            # Get cursor position (Waybar button clicked)
+            res = subprocess.run(["hyprctl", "cursorpos"], capture_output=True, text=True)
+            cursor_x, cursor_y = map(int, res.stdout.strip().split(","))
+            
+            # Get monitor info to clamp
+            res_mon = subprocess.run(["hyprctl", "monitors", "-j"], capture_output=True, text=True)
+            monitors = json.loads(res_mon.stdout)
             focused_mon = next((m for m in monitors if m.get("focused")), monitors[0])
             mon_width = focused_mon.get("width", 1920)
-            mon_height = focused_mon.get("height", 1080)
             mon_x = focused_mon.get("x", 0)
-            mon_y = focused_mon.get("y", 0)
             scale = focused_mon.get("scale", 1.0)
-        except Exception:
-            mon_width = 1920
-            mon_height = 1080
-            mon_x = 0
-            mon_y = 0
-            scale = 1.0
             
-        # Target logical size of the window (including GTK client-side decorations):
-        # GTK4 adds a 64px width and 69px height decoration margin to our 380x590 request.
-        win_width = 380 + 64
-        win_height = 590 + 69
-        margin_right = 24
-        margin_top = 24
-        
-        # Calculate target logical X and Y coordinates
-        target_x = int(mon_x + (mon_width / scale) - win_width - margin_right)
-        target_y = int(mon_y + margin_top)
-        
-        def move():
-            # Wait a tiny fraction of a second for the window to map in Hyprland
-            time.sleep(0.05)
-            # Resize the window using its class
-            subprocess.run([
-                "hyprctl", "dispatch", "resizewindowpixel", 
-                f"exact 380 590,class:com.system.dashboard"
-            ])
-            # Move the window using its class
-            subprocess.run([
-                "hyprctl", "dispatch", "movewindowpixel", 
-                f"exact {target_x} {target_y},class:com.system.dashboard"
-            ])
-            # Pin the window to make it sticky across all workspaces and always on top
-            subprocess.run([
-                "hyprctl", "dispatch", "pin",
-                "class:com.system.dashboard"
-            ])
-        threading.Thread(target=move, daemon=True).start()
+            # Calculate target_x relative to the monitor
+            local_cursor_x = (cursor_x - mon_x) / scale
+            target_x = int(local_cursor_x - 190)
+            
+            # Clamp target_x so the 380px wide popup stays fully on screen
+            max_x = int((mon_width / scale) - 380 - 12)
+            target_x = max(12, min(target_x, max_x))
+        except Exception as e:
+            print(f"Error calculating popup position: {e}", file=sys.stderr)
+            target_x = 12 # fallback
+            
+        Gtk4LayerShell.set_margin(self, Gtk4LayerShell.Edge.LEFT, target_x)
 
 
 class DashboardApp(Gtk.Application):
@@ -1297,16 +1603,15 @@ class DashboardApp(Gtk.Application):
             )
 
             self.window = DashboardWindow(self)
-            self.window.present()
-            self.window.position_window()
+            self.window.show_popup()
         else:
             if self.window.is_visible():
-                self.window.hide()
+                self.window.hide_popup()
             else:
+                self.window.update_position()
                 if self.window.cached_data:
                     self.window._apply_metrics(self.window.cached_data)
-                self.window.present()
-                self.window.position_window()
+                self.window.show_popup()
 
 if __name__ == "__main__":
     app = DashboardApp()

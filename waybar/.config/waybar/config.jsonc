@@ -3,7 +3,6 @@
   "height": 2,
   "spacing": 4,
   "modules-left": [
-    "custom/dashboard",
     "hyprland/workspaces",
     "sway/mode",
     "sway/scratchpad",
@@ -23,6 +22,7 @@
     "sway/language",
     "battery",
     "battery#bat2",
+    "custom/dashboard",
     "clock",
     "tray"
   ],
@@ -185,7 +185,7 @@
     "tooltip": true
   },
   "custom/dashboard": {
-    "format": "󰕮",
+    "format": "⚙",
     "on-click": "~/.config/hypr/scripts/system-dashboard.sh",
     "tooltip": false
   }
