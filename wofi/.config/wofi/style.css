@@ -1,7 +1,7 @@
-/* Window: only blue outline */
+/* Window styling */
 window {
-  border: 2px solid #5a6fd8;
-  background-color: #000000;
+  border: 1px solid #3d484d;
+  background-color: #2b3339;
   border-radius: 12px;
 }
 
@@ -12,13 +12,13 @@ window {
   background-color: transparent;
 }
 
-/* Input: no blue, neutral monochrome */
+/* Input Search Box */
 #input {
   margin: 8px;
   padding: 6px;
-  border: 1px solid #2a2a2a;
-  background-color: #000000;
-  color: #ffffff;
+  border: 1px solid #3d484d;
+  background-color: #323c41;
+  color: #d3c6aa;
   border-radius: 8px;
 }
 
@@ -32,23 +32,25 @@ window {
 /* Text */
 #text {
   margin: 4px;
-  color: #ffffff;
+  color: #d3c6aa;
 }
 
-/* Selected: grayscale only (no blue) */
+/* Selected Entry */
 #entry:selected {
-  background-color: #1a1a1a;
+  background-color: #3d484d;
 }
 
 #text:selected {
-  color: #ffffff;
+  color: #d3c6aa;
+  font-weight: bold;
 }
 
-/* Scrollbar: fully black */
+/* Scrollbar */
 scrollbar {
   background-color: transparent;
 }
 
 scrollbar slider {
-  background-color: #000000;
+  background-color: #323c41;
+  border-radius: 4px;
 }

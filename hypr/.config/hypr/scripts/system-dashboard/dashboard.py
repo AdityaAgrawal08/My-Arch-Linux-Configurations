@@ -51,8 +51,8 @@ window {
 }
 
 .main-card {
-    background-color: #121214;
-    color: #e2e8f0;
+    background-color: #2b3339;
+    color: #d3c6aa;
     border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.03);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
@@ -60,28 +60,28 @@ window {
 
 /* Explicitly style all labels to ensure they are visible on dark background */
 label {
-    color: #e2e8f0;
+    color: #d3c6aa;
     font-size: 11px;
 }
 
 label.sub-text {
-    color: #a0aec0;
+    color: #859289;
     font-size: 10px;
 }
 
 label.bold-text {
-    color: #ffffff;
+    color: #eceef4;
     font-weight: 700;
     font-size: 11px;
 }
 
 label.card-title {
-    color: #a0aec0;
+    color: #859289;
     font-size: 10px;
 }
 
 .card {
-    background-color: #1e1e24;
+    background-color: #323c41;
     border-radius: 12px;
     padding: 10px 12px;
     margin: 4px 8px;
@@ -90,19 +90,19 @@ label.card-title {
 }
 
 .warning-card {
-    background-color: #2d1f1f;
-    border: 1px solid #78281f;
+    background-color: #3e2f2f;
+    border: 1px solid #7e3e3e;
     padding: 8px 12px;
 }
 
 .warning-card label {
-    color: #f1948a;
+    color: #e67e80;
 }
 
 .card-title {
     font-size: 10px;
     font-weight: 800;
-    color: #a0aec0;
+    color: #859289;
     text-transform: uppercase;
     letter-spacing: 0.8px;
     margin-bottom: 2px;
@@ -111,14 +111,14 @@ label.card-title {
 .clock-time {
     font-size: 30px;
     font-weight: 800;
-    color: #ffffff;
+    color: #eceef4;
     letter-spacing: -1px;
 }
 
 .clock-date {
     font-size: 11px;
     font-weight: 500;
-    color: #a0aec0;
+    color: #859289;
 }
 
 scale trough {
@@ -129,7 +129,7 @@ scale trough {
 
 scale highlight {
     border-radius: 2px;
-    background-color: #f5b041;
+    background-color: #a7c080;
 }
 
 scale slider {
@@ -137,7 +137,7 @@ scale slider {
     min-height: 10px;
     margin: -3px 0;
     border-radius: 50%;
-    background-color: #ffffff;
+    background-color: #eceef4;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
     transition: transform 0.1s ease;
 }
@@ -154,7 +154,7 @@ levelbar trough {
 
 levelbar block {
     border-radius: 2px;
-    background-color: #f5b041;
+    background-color: #a7c080;
 }
 
 button {
@@ -162,7 +162,7 @@ button {
     border: 1px solid rgba(255, 255, 255, 0.02);
     border-radius: 8px;
     padding: 4px 8px;
-    color: #e2e8f0;
+    color: #d3c6aa;
     font-weight: 600;
     font-size: 11px;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -170,7 +170,7 @@ button {
 
 button:hover {
     background-color: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
+    color: #eceef4;
     transform: translateY(-1px);
 }
 
@@ -181,7 +181,7 @@ button:active {
 button.close-btn {
     background-image: none;
     background-color: rgba(255, 255, 255, 0.08);
-    color: #a0aec0;
+    color: #859289;
     border: none;
     border-radius: 9999px;
     min-width: 22px;
@@ -194,14 +194,14 @@ button.close-btn {
 
 button.close-btn:hover {
     background-color: rgba(255, 255, 255, 0.15);
-    color: #ffffff;
+    color: #eceef4;
     transform: scale(1.1);
 }
 
 button.profile-btn {
     background-image: none;
     background-color: rgba(255, 255, 255, 0.06);
-    color: #a0aec0;
+    color: #859289;
     border: none;
     border-radius: 8px;
     padding: 6px 4px;
@@ -212,14 +212,14 @@ button.profile-btn {
 button.profile-btn:hover {
     background-image: none;
     background-color: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
+    color: #eceef4;
 }
 
 button.profile-btn.active {
     background-image: none;
-    background-color: #f5b041;
-    color: #121214;
-    box-shadow: 0 2px 6px rgba(245, 176, 65, 0.3);
+    background-color: #a7c080;
+    color: #2b3339;
+    box-shadow: 0 2px 6px rgba(167, 192, 128, 0.2);
 }
 
 /* Custom styling for SpinButton in dark mode */
@@ -231,24 +231,24 @@ spinbutton {
 }
 
 spinbutton, spinbutton text, spinbutton entry {
-    color: #ffffff !important;
+    color: #eceef4 !important;
     background-color: transparent;
 }
 
 spinbutton button {
     background-color: transparent;
     border: none;
-    color: #a0aec0;
+    color: #859289;
     padding: 1px 4px;
 }
 
 spinbutton button:hover {
     background-color: rgba(255, 255, 255, 0.1);
-    color: #ffffff;
+    color: #eceef4;
 }
 
 .nav-bar {
-    background-color: #18181c;
+    background-color: #232a2e;
     border-top: 1px solid rgba(255, 255, 255, 0.03);
     padding: 6px 12px;
 }
@@ -258,7 +258,7 @@ spinbutton button:hover {
     background-image: none;
     border: none;
     box-shadow: none;
-    color: #a0aec0;
+    color: #859289;
     font-size: 11px;
     font-weight: 700;
     padding: 6px 12px;
@@ -267,15 +267,15 @@ spinbutton button:hover {
 
 .nav-btn:hover {
     background-color: rgba(255, 255, 255, 0.06);
-    color: #ffffff;
+    color: #eceef4;
 }
 
 .nav-btn.active {
-    background-color: #f5b041;
+    background-color: #a7c080;
     background-image: none;
-    color: #121214;
+    color: #2b3339;
     border: none;
-    box-shadow: 0 2px 6px rgba(245, 176, 65, 0.2);
+    box-shadow: 0 2px 6px rgba(167, 192, 128, 0.2);
 }
 
 .list-item {
@@ -294,7 +294,7 @@ spinbutton button:hover {
 
 .sub-text {
     font-size: 9.5px;
-    color: #a0aec0;
+    color: #859289;
 }
 
 scrollbar trough {
@@ -306,7 +306,7 @@ scrollbar slider {
 }
 
 .compact-card {
-    background-color: #1e1e24;
+    background-color: #323c41;
     border-radius: 12px;
     padding: 8px 12px;
     margin: 0;
@@ -316,7 +316,7 @@ scrollbar slider {
 
 label.arch-logo {
     font-size: 28px;
-    color: #1793d1;
+    color: #7fbbb3;
     margin-left: 4px;
     font-weight: bold;
 }
@@ -356,11 +356,11 @@ class CircularProgress(Gtk.DrawingArea):
         # Draw active progress arc
         if self.value > 0:
             if self.label_text == "BAT" and self.value <= 0.20:
-                cr.set_source_rgb(231/255, 76/255, 60/255) # Soft Red when battery <= 20%
+                cr.set_source_rgb(230/255, 126/255, 128/255) # Everforest Soft Red when battery <= 20%
             elif self.label_text == "BAT" and self.charging:
-                cr.set_source_rgb(46/255, 204/255, 113/255) # Emerald Green when charging
+                cr.set_source_rgb(131/255, 192/255, 146/255) # Everforest Soft Green/Teal when charging
             else:
-                cr.set_source_rgb(245/255, 176/255, 65/255) # Amber Yellow otherwise
+                cr.set_source_rgb(167/255, 192/255, 128/255) # Everforest Sage Green otherwise
             cr.set_line_width(thickness)
             cr.set_line_cap(cairo.LINE_CAP_ROUND)
             start_angle = -math.pi / 2.0
