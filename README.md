@@ -68,10 +68,17 @@ Our dotfiles utilize an intelligent, profile-based provisioning system. Rather t
 *   **Wofi Launcher:** A high-speed application launcher custom-styled with subtle hover highlights, blurred backdrops, and modern list selections.
 
 ### 🐚 Terminal & Editors
-*   **Fish Shell:** Modern, interactive shell equipped with live syntax highlighting, autosuggestions based on command history, and custom functional wrappers.
-*   **Starship Prompt:** Fast, sleek cross-shell terminal prompt configured with dynamic Git status tags, runtime environment symbols, and execution timers.
-*   **Neovim:** A personalized development setup loading modular packages via `lazy.nvim`. Features Language Server Protocol (LSP) auto-configuration, tree-sitter syntax styling, and quick fuzzy search parameters.
-*   **Zathura:** A minimalist, keyboard-centric document viewer optimized for rapid PDF browsing. Integrates with a unique Fish shell alias `open` which maps documents directly to Zathura.
+*   **Fish Shell**: Modern, interactive shell equipped with live syntax highlighting, autosuggestions based on command history, and custom functional wrappers.
+*   **Starship Prompt**: Fast, sleek cross-shell terminal prompt configured with dynamic Git status tags, runtime environment symbols, and execution timers.
+*   **Neovim (with Document Editing Mode)**: A personalized Lua development setup. When you open a Markdown (`.md`) or text (`.txt`) file, Neovim automatically activates a dedicated **Document Editing Mode**:
+    *   **Focus/Zen Mode**: Press `<leader>mf` (Space + `m` + `f`) to toggle Focus Mode. This centers your cursor vertically (typewriter style) and dims surrounding text block areas.
+    *   **Formatting Toolbar**: Press `<leader>mt` (Space + `m` + `t`) to open the formatting command palette (Bold, Italic, headings, tables, links, lists).
+    *   **Formatting Shortcuts**: Select text and press `<C-b>` for Bold, `<C-i>` for Italic, or `<C-Space>` on a line to toggle checklists (`[ ]` <-> `[x]`).
+    *   **Image Pasting**: Copy an image to your clipboard and press `<leader>mi` (Space + `m` + `i`) to save it instantly to `assets/` and insert its markdown reference.
+    *   **Image Resizing**: Position your cursor on an image line and type `:ImageResize 50` (or `:ImageResize 300x200`) to physically resize the image.
+    *   **Live Preview**: Press `<leader>mp` (Space + `m` + `p`) to open a synchronized live preview in your web browser.
+    *   **Pandoc Exporting**: Press `<leader>me` (Space + `m` + `e`) to open the export menu and convert your document to PDF, HTML, or DOCX in the background.
+*   **Zathura**: A minimalist, keyboard-centric document viewer optimized for rapid PDF browsing. Integrates with a unique Fish shell alias `open` which maps documents directly to Zathura.
 
 ### 🔊 Lid-Sound and Hook Triggers
 A custom background listener maps physical system triggers:
@@ -85,17 +92,18 @@ Bundled under `.local/bin` are custom standalone scripts backed by modular Pytho
 *   `pdfmerge`: High-fidelity PDF report compilation utility.
 
 ### 🎛️ System Dashboard Widget
-A high-performance **GTK4/PyGObject** status panel running as a lightweight quick-settings overlay anchored to the top-right corner of the screen:
-*   **Persistent Daemon:** The application runs as a single-instance background daemon (`com.system.dashboard`). Spawning it (via Waybar or `SUPER + I`) toggles window visibility instantly (`0ms` delay) by showing/hiding the persistent window instead of starting new processes.
-*   **Adaptive CPU Polling:** Automatically monitors its own CPU usage. Under heavy system loads (>5.0% CPU for 15 seconds), it pauses background metrics collection and displays a warning card, automatically resuming once CPU usage drops below 2.0%.
-*   **Interactive Controls:**
-    *   **Sliders:** Volume (`wpctl`) and Brightness (`brightnessctl`) with a 1.0-second user-interaction lockout to prevent slider fighting.
-    *   **Segmented Power Modes:** A dedicated card with a **Segmented Button Control** to switch between `Power Saver`, `Balanced`, and `Performance` profiles (`powerprofilesctl`).
-    *   **Focus Mode:** A Pomodoro timer (1-180 min) that sends a critical desktop notification (`notify-send`) immediately upon completion.
-*   **Information-Dense Tabs:**
-    *   *Stats:* Real-time hardware utilization (CPU, RAM, GPU, Disk) and network details (IP, SSID, MAC, DNS, and Ping latency).
-    *   *Manage:* Process explorer and real-time system log reader (`journalctl`).
-*   **Compositor Integration:** Uses `hyprctl` to dynamically query monitor scaling and coordinates, ensuring the window is positioned exactly in the top-right corner with a `24px` margin, pinned (`pin`) across all workspaces, and decorated with a tight window border.
+A high-performance, Waybar-integrated settings panel (anchored directly under your cursor below the status bar). 
+
+#### 📖 How to Use:
+*   **Open/Close**: Click the Settings gear (`⚙`) icon on the right side of Waybar, or press `SUPER + I`. Press it again or click the `×` button in the top-right corner to close.
+*   **Peek Hover Expand**: Hover your mouse over the compact widget to expand it into the full dashboard; move your mouse away to collapse it back.
+*   **Battery Status Indicator**: The circular battery (`BAT`) ring dynamically changes color:
+    *   🟢 **Green** with `BAT⚡`: Charging.
+    *   🔴 **Red**: Battery level is low (20% or lower).
+    *   🟡 **Amber**: Discharging normally.
+*   **Sliders**: Scroll or drag to adjust volume and display brightness.
+*   **Power Modes**: Select `Power Saver`, `Balanced`, or `Performance` to dynamically adjust system profiles.
+*   **Focus Mode**: Set your session time using the spinbox, click **Start** to begin, and receive a critical notification when the timer finishes. Click **Reset** to cancel.
 
 ---
 

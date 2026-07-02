@@ -18,6 +18,7 @@ require("lazy").setup({
     { import = "plugins.files" },
     { import = "plugins.git" },
     { import = "plugins.lsp" },
+    { import = "plugins.document" },
   },
   checker = {
     enabled = false,
