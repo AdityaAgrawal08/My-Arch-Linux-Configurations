@@ -1,40 +1,82 @@
 * {
-  font-family: "JetBrainsMono Nerd Font", "Noto Sans", monospace;
+  font-family: "Adwaita Sans", "Noto Sans", sans-serif;
   font-size: 11px;
   color: #d3c6aa; /* Everforest Foreground */
 }
 
 window#waybar {
-  background: rgba(43, 51, 57, 0.85); /* Everforest Dark Base with Opacity */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(43, 51, 57, 0.88); /* Everforest Dark Base with Opacity */
+  border-bottom: 1px solid #3d484d;
 }
 
-/* Generic module styling */
-#backlight,
+/* Left Modules: Workspaces grouped in a single container */
+#workspaces {
+  background: rgba(50, 60, 65, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  margin: 4px 8px;
+  padding: 2px;
+}
+
+#workspaces button {
+  padding: 2px 8px;
+  margin: 0 2px;
+  border-radius: 6px;
+  color: #859289;
+  background: transparent;
+  border: none;
+  font-weight: bold;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#workspaces button:hover {
+  color: #d3c6aa;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+#workspaces button.active {
+  color: #d3c6aa;
+  background: rgba(71, 82, 88, 0.65); /* Muted, highly readable gray-green */
+}
+
+#workspaces button.urgent {
+  color: #2b3339;
+  background: #e67e80; /* Soft Red */
+}
+
+/* Right Modules: Pill Style */
 #pulseaudio,
-#power-profiles-daemon,
+#backlight,
 #keyboard-state,
 #language,
 #mpd,
-#tray {
-  padding: 4px 12px;
-  margin: 4px 6px;
+#tray,
+#custom-dashboard {
+  background: rgba(50, 60, 65, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.03);
   border-radius: 8px;
-  background: rgba(50, 60, 65, 0.45); /* Muted Everforest Surface */
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 2px 12px;
+  margin: 4px 4px;
   transition: all 0.2s ease;
 }
 
-#backlight:hover,
 #pulseaudio:hover,
-#tray:hover {
+#backlight:hover,
+#custom-dashboard:hover {
   background: rgba(71, 82, 88, 0.55);
+  color: #eceef4;
 }
 
+/* Clean spacing for tray icons */
+#tray {
+  margin-right: 8px;
+}
+
+/* Menu styles for Wi-Fi/Bluetooth popups */
 menu {
   background-color: #2b3339;
   color: #d3c6aa;
-  font-family: "JetBrainsMono Nerd Font", monospace;
+  font-family: "Adwaita Sans", sans-serif;
   border: 1px solid #3d484d;
   border-radius: 10px;
   padding: 6px;
@@ -52,61 +94,13 @@ menu menuitem {
   transition: all 0.15s ease;
 }
 
-/* Hovered item */
 menu menuitem:hover,
 menu menuitem:active {
   background-color: #3d484d;
   color: #d3c6aa;
 }
 
-/* Checked / selected item */
 menu menuitem:checked {
   background-color: #475258;
-  color: #a7c080; /* Sage Green */
-}
-
-#workspaces {
-  margin: 4px 6px;
-}
-
-#workspaces button {
-  padding: 4px 10px;
-  margin: 0 2px;
-  border-radius: 8px;
-  color: #859289; /* Desaturated gray-green */
-  background: transparent;
-  border: none;
-  transition: all 0.2s ease;
-}
-
-#workspaces button:hover {
-  color: #d3c6aa;
-  background: rgba(50, 60, 65, 0.35);
-}
-
-#workspaces button.active {
-  color: #d3c6aa;
-  background: rgba(71, 82, 88, 0.5);
-  font-weight: bold;
-}
-
-#workspaces button.urgent {
-  color: #e67e80; /* Soft Red */
-  background: rgba(230, 126, 128, 0.15);
-}
-
-#custom-dashboard {
-  padding: 4px 14px;
-  margin: 4px 6px;
-  border-radius: 8px;
-  background: rgba(61, 72, 77, 0.5); /* Warm gray */
-  color: #a7c080; /* Sage Green Accent */
-  font-size: 13px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  transition: all 0.2s ease;
-}
-
-#custom-dashboard:hover {
-  background: rgba(71, 82, 88, 0.7);
-  color: #d3c6aa;
+  color: #a7c080;
 }

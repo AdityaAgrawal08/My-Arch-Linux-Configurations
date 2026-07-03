@@ -215,10 +215,12 @@ button.profile-btn:hover {
     color: #eceef4;
 }
 
-button.profile-btn.active {
+button.profile-btn.active,
+button.profile-btn.active label,
+button.profile-btn.active .btn-label {
     background-image: none;
     background-color: #a7c080;
-    color: #2b3339;
+    color: #000000;
     box-shadow: 0 2px 6px rgba(167, 192, 128, 0.2);
 }
 
@@ -231,7 +233,7 @@ spinbutton {
 }
 
 spinbutton, spinbutton text, spinbutton entry {
-    color: #eceef4 !important;
+    color: #eceef4;
     background-color: transparent;
 }
 
@@ -270,10 +272,12 @@ spinbutton button:hover {
     color: #eceef4;
 }
 
-.nav-btn.active {
+.nav-btn.active,
+.nav-btn.active label,
+.nav-btn.active .btn-label {
     background-color: #a7c080;
     background-image: none;
-    color: #2b3339;
+    color: #000000;
     border: none;
     box-shadow: 0 2px 6px rgba(167, 192, 128, 0.2);
 }
@@ -620,15 +624,18 @@ class DashboardWindow(Gtk.Window):
         
         self.btn_nav_home = Gtk.Button(label="🏠 Home")
         self.btn_nav_home.add_css_class("nav-btn")
+        self.btn_nav_home.get_child().add_css_class("btn-label")
         self.btn_nav_home.add_css_class("active")
         self.btn_nav_home.connect("clicked", lambda x: self._switch_page("home"))
         
         self.btn_nav_stats = Gtk.Button(label="📊 Stats")
         self.btn_nav_stats.add_css_class("nav-btn")
+        self.btn_nav_stats.get_child().add_css_class("btn-label")
         self.btn_nav_stats.connect("clicked", lambda x: self._switch_page("stats"))
         
         self.btn_nav_manage = Gtk.Button(label="⚙️ Manage")
         self.btn_nav_manage.add_css_class("nav-btn")
+        self.btn_nav_manage.get_child().add_css_class("btn-label")
         self.btn_nav_manage.connect("clicked", lambda x: self._switch_page("manage"))
         
         self.nav_box.append(self.btn_nav_home)
@@ -753,14 +760,17 @@ class DashboardWindow(Gtk.Window):
         
         self.btn_profile_saver = Gtk.Button(label="Power Saver")
         self.btn_profile_saver.add_css_class("profile-btn")
+        self.btn_profile_saver.get_child().add_css_class("btn-label")
         self.btn_profile_saver.connect("clicked", lambda x: self._set_power_profile("power-saver"))
         
         self.btn_profile_balanced = Gtk.Button(label="Balanced")
         self.btn_profile_balanced.add_css_class("profile-btn")
+        self.btn_profile_balanced.get_child().add_css_class("btn-label")
         self.btn_profile_balanced.connect("clicked", lambda x: self._set_power_profile("balanced"))
         
         self.btn_profile_perf = Gtk.Button(label="Performance")
         self.btn_profile_perf.add_css_class("profile-btn")
+        self.btn_profile_perf.get_child().add_css_class("btn-label")
         self.btn_profile_perf.connect("clicked", lambda x: self._set_power_profile("performance"))
         
         profile_box.append(self.btn_profile_saver)

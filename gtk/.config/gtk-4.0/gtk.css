@@ -33,3 +33,19 @@ modelbutton:hover {
     background-color: @selected_bg_color;
     color: @fg_color;
 }
+
+/* Active/Checked states */
+check, radio {
+    min-width: 14px;
+    min-height: 14px;
+    border: 1px solid @border_color;
+    border-radius: 3px;
+    background-color: transparent;
+    color: transparent;
+}
+
+check:checked, radio:checked {
+    background-color: @accent_color;
+    color: @bg_color;
+    border: 1px solid @accent_color;
+}

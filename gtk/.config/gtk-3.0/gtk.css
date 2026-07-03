@@ -39,12 +39,38 @@ modelbutton:hover {
 
 /* Active/Checked states (e.g. enabled Wi-Fi checkboxes) */
 check, radio {
-    color: @accent_color;
+    -gtk-icon-source: builtin;
+    min-width: 14px;
+    min-height: 14px;
+    border: 1px solid @border_color;
+    border-radius: 3px;
+    background-color: transparent;
+    color: transparent;
 }
 
 check:checked, radio:checked {
+    -gtk-icon-source: builtin;
     background-color: @accent_color;
     color: @bg_color;
+    border: 1px solid @accent_color;
+}
+
+/* Ensure checkmarks in popups/menus are visible and clean */
+menu check, menuitem check, check.menuitem {
+    -gtk-icon-source: builtin;
+    min-width: 14px;
+    min-height: 14px;
+    border: 1px solid @border_color;
+    border-radius: 3px;
+    background-color: transparent;
+    color: transparent;
+}
+
+menu check:checked, menuitem check:checked, check.menuitem:checked {
+    -gtk-icon-source: builtin;
+    background-color: @accent_color;
+    color: @bg_color;
+    border: 1px solid @accent_color;
 }
 
 /* Tooltips */
