@@ -1,0 +1,35 @@
+/* Color Definitions */
+@define-color bg_color #2b3339;
+@define-color surface_color #323c41;
+@define-color border_color #3d484d;
+@define-color fg_color #d3c6aa;
+@define-color selected_bg_color #475258;
+@define-color accent_color #a7c080;
+
+/* Base Window, Menu and Popover styling */
+window, 
+popover, 
+.popover, 
+.popup {
+    background-color: @bg_color;
+    color: @fg_color;
+    border: 1px solid @border_color;
+    border-radius: 10px;
+    padding: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Popover Buttons / Menu Items */
+button.menuitem,
+modelbutton {
+    padding: 6px 12px;
+    margin: 2px 4px;
+    border-radius: 6px;
+    color: @fg_color;
+}
+
+button.menuitem:hover,
+modelbutton:hover {
+    background-color: @selected_bg_color;
+    color: @fg_color;
+}

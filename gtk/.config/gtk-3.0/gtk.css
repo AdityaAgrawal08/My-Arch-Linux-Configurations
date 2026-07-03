@@ -1,0 +1,57 @@
+/* Color Definitions */
+@define-color bg_color #2b3339;
+@define-color surface_color #323c41;
+@define-color border_color #3d484d;
+@define-color fg_color #d3c6aa;
+@define-color selected_bg_color #475258;
+@define-color accent_color #a7c080;
+
+/* Base Window and Menu styling */
+window, 
+menu, 
+.menu, 
+.popup {
+    background-color: @bg_color;
+    color: @fg_color;
+    border: 1px solid @border_color;
+    border-radius: 10px;
+    padding: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Menu Items */
+menuitem, 
+.menuitem,
+modelbutton {
+    padding: 6px 12px;
+    margin: 2px 4px;
+    border-radius: 6px;
+    color: @fg_color;
+    transition: all 0.15s ease;
+}
+
+menuitem:hover, 
+menuitem:active,
+modelbutton:hover {
+    background-color: @selected_bg_color;
+    color: @fg_color;
+}
+
+/* Active/Checked states (e.g. enabled Wi-Fi checkboxes) */
+check, radio {
+    color: @accent_color;
+}
+
+check:checked, radio:checked {
+    background-color: @accent_color;
+    color: @bg_color;
+}
+
+/* Tooltips */
+tooltip {
+    background-color: @surface_color;
+    color: @fg_color;
+    border: 1px solid @border_color;
+    border-radius: 8px;
+    padding: 6px 10px;
+}
