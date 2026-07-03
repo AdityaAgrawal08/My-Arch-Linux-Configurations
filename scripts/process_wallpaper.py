@@ -3,7 +3,7 @@ import os
 from PIL import Image, ImageEnhance
 
 def process_wallpaper():
-    input_path = "/home/aditya/.gemini/antigravity/brain/91fa5726-b486-43c6-b6ae-1ac27fdfd7a0/expanded_wallpaper_1783066910261.jpg"
+    input_path = "/home/aditya/.gemini/antigravity/brain/91fa5726-b486-43c6-b6ae-1ac27fdfd7a0/wider_cave_wallpaper_1783067501951.jpg"
     output_path = os.path.expanduser("~/dotfiles/wallpaper.png")
     
     if not os.path.exists(input_path):
@@ -43,7 +43,7 @@ def process_wallpaper():
     # Save output
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     canvas.save(output_path, "PNG")
-    print(f"Processed landscape wallpaper successfully saved to: {output_path}")
+    print(f"Processed wider-cave landscape wallpaper successfully saved to: {output_path}")
 
 if __name__ == "__main__":
     process_wallpaper()
