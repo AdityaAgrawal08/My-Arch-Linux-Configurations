@@ -31,26 +31,36 @@ window#waybar {
   background: rgba(71, 82, 88, 0.55);
 }
 
-/* ---------------------------------------------------------
-   FIX NETWORK / VOLUME / BLUETOOTH POPUP MENU VISIBILITY
-   --------------------------------------------------------- */
-menu,
-menu * {
-  background-color: #2b3339; /* Everforest dark */
-  color: #d3c6aa; /* Light warm text */
+menu {
+  background-color: #2b3339;
+  color: #d3c6aa;
   font-family: "JetBrainsMono Nerd Font", monospace;
   border: 1px solid #3d484d;
+  border-radius: 10px;
+  padding: 6px;
 }
 
-/* Hovered item (cursor over) */
-menuitem:hover,
-menuitem:active {
-  background-color: #3d484d; /* Muted gray highlight */
+menu * {
+  border: none;
+}
+
+menu menuitem {
+  padding: 6px 12px;
+  margin: 2px 4px;
+  border-radius: 6px;
+  color: #d3c6aa;
+  transition: all 0.15s ease;
+}
+
+/* Hovered item */
+menu menuitem:hover,
+menu menuitem:active {
+  background-color: #3d484d;
   color: #d3c6aa;
 }
 
 /* Checked / selected item */
-menuitem:checked {
+menu menuitem:checked {
   background-color: #475258;
   color: #a7c080; /* Sage Green */
 }
