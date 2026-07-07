@@ -116,7 +116,7 @@ guint32 send_notification(const char *summary, const char *body, guint8 urgency_
     GVariant *actions = g_variant_builder_end(&actions_builder);
     
     GVariant *params = g_variant_new(
-        "(susssasa{sv}i)",
+        "(susss@as@a{sv}i)",
         "Battery Monitor",   // app_name
         (guint32)0,          // replaces_id
         "",                  // app_icon
