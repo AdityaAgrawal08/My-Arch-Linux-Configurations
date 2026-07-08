@@ -124,7 +124,7 @@ guint32 send_notification(const char *summary, const char *body, guint8 urgency_
         body,
         actions,
         hints,
-        (gint32)-1           // expire_timeout
+        (gint32)20000        // expire_timeout (20 seconds)
     );
 
     GVariant *result = g_dbus_connection_call_sync(
