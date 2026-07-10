@@ -1,0 +1,96 @@
+/* Window styling */
+window {
+  border: 2px solid #3d484d;
+  background-color: #2b3339;
+  border-radius: 12px;
+}
+
+/* Container */
+#outer-box {
+  margin: 12px;
+  padding: 12px;
+  background-color: transparent;
+}
+
+/* Style the prompt / title */
+#input {
+  border: none;
+  background-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+  margin: 10px 10px 15px 10px;
+  padding: 0px;
+  color: #d3c6aa;
+  font-size: 13px;
+  font-weight: bold;
+  caret-color: transparent;
+}
+
+/* Hide the search magnifier icon and any clear buttons inside the input */
+#input image, #input icon {
+  opacity: 0;
+  margin-left: -20px;
+  margin-right: -20px;
+}
+
+/* General Entry styling for the buttons */
+#entry {
+  padding: 8px 0px;
+  border-radius: 6px;
+  margin: 4px;
+  border: 1px solid transparent;
+}
+
+/* Center the text inside the entries */
+#text {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* NO Option (First element on the left) */
+#entry:nth-child(1) {
+  background-color: #323c41;
+  border: 1px solid #3d484d;
+}
+
+#entry:nth-child(1) #text {
+  color: #a7c080; /* Soft Everforest Green */
+}
+
+/* YES Option (Second element on the right) */
+#entry:nth-child(2) {
+  background-color: #ea6962; /* Soft Everforest Red */
+  border: 1px solid #ea6962;
+}
+
+#entry:nth-child(2) #text {
+  color: #ffffff; /* White text for contrast */
+}
+
+/* Selected / Focused states */
+#entry:nth-child(1):selected {
+  background-color: #3d484d;
+  border: 1px solid #a7c080;
+}
+
+#entry:nth-child(1):selected #text {
+  color: #a7c080;
+}
+
+#entry:nth-child(2):selected {
+  background-color: #e67e80; /* Lighter red when hovered/selected */
+  border: 1px solid #ffffff;
+}
+
+#entry:nth-child(2):selected #text {
+  color: #ffffff;
+}
+
+/* Hide scrollbar */
+scrollbar {
+  background-color: transparent;
+}
+scrollbar slider {
+  background-color: transparent;
+}
