@@ -6,6 +6,7 @@ sudo pacman -S --needed stow git base-devel
 
 # Core scripts
 chmod +x scripts/core/*.sh
+mkdir -p state
 ./scripts/core/detect.sh > state/env.json
 ./scripts/core/apply.sh
 
@@ -43,6 +44,7 @@ stow wofi
 stow starship
 stow zathura
 stow trash
+stow opencode
 
 # Ensure local binaries executable + PATH
 chmod +x "$HOME/.local/bin/"* 2>/dev/null || true

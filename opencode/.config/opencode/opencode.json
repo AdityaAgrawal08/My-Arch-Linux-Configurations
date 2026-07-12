@@ -1,0 +1,39 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "plan",
+  "permission": {
+    "read": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "websearch": "allow",
+    "webfetch": "allow",
+    "skill": "allow",
+    "edit": "deny",
+    "bash": "deny",
+    "github_*": "allow"
+  },
+  "agent": {
+    "build": {
+      "disable": true
+    },
+    "coder": {
+      "disable": true
+    }
+  },
+  "mcp": {
+    "github": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_PERSONAL_ACCESS_TOKEN}",
+        "GITHUB_READ_ONLY": "1"
+      },
+      "enabled": true
+    }
+  }
+}

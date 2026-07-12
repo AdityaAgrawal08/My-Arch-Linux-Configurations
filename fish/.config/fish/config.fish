@@ -9,6 +9,7 @@ set -g fish_greeting ""
 abbr --add upd "sudo pacman -Syu"
 abbr --add inst "sudo pacman -S"
 abbr --add rem "sudo pacman -Rns"
+abbr --add ocr "opencode"
 
 # Set editor
 set -gx EDITOR nvim
