@@ -13,6 +13,21 @@ local function get_char_len(str, byte_pos)
   return next_pos - byte_pos
 end
 
+local function get_cursor_word_bounds(line, col, word)
+  if word == "" then return nil, nil end
+  local start_pos = 1
+  while true do
+    local s, e = line:find(word, start_pos, true)
+    if not s then break end
+    local cursor_pos = col + 1
+    if cursor_pos >= s and cursor_pos <= e then
+      return s, e
+    end
+    start_pos = s + 1
+  end
+  return line:find(word, 1, true)
+end
+
 -- Custom formatting helper functions
 local function toggle_wrap(prefix, suffix)
   suffix = suffix or prefix
@@ -55,8 +70,9 @@ local function toggle_wrap(prefix, suffix)
     local word = vim.fn.expand("<cword>")
     if word == "" then return end
     local line = vim.api.nvim_get_current_line()
+    local col = vim.api.nvim_win_get_cursor(0)[2]
     
-    local start_pos, end_pos = line:find(word, 1, true)
+    local start_pos, end_pos = get_cursor_word_bounds(line, col, word)
     if not start_pos then return end
     
     local before = string.sub(line, 1, start_pos - 1)
@@ -207,10 +223,13 @@ end
 
 -- Focus / Zen Mode
 local focus_active = false
-local original_scrolloff = vim.wo.scrolloff
+local original_scrolloff = nil
 
 local function toggle_focus_mode()
   focus_active = not focus_active
+  local has_zen, zen = pcall(require, "zen-mode")
+  local has_twilight, _ = pcall(require, "twilight")
+  
   if focus_active then
     original_scrolloff = vim.wo.scrolloff
     vim.wo.scrolloff = 999
@@ -219,17 +238,27 @@ local function toggle_focus_mode()
     vim.wo.spell = true
     
     pcall(function()
-      vim.cmd("ZenMode")
-      vim.cmd("Twilight")
+      if has_zen and not zen.active then
+        vim.cmd("ZenMode")
+      end
+      if has_twilight and not require("twilight.view").is_open() then
+        vim.cmd("Twilight")
+      end
     end)
     vim.notify("Focus Mode Enabled (Typewriter scroll active)", vim.log.levels.INFO)
   else
-    vim.wo.scrolloff = original_scrolloff
+    if original_scrolloff then
+      vim.wo.scrolloff = original_scrolloff
+    end
     vim.wo.spell = false
     
     pcall(function()
-      vim.cmd("ZenMode")
-      vim.cmd("Twilight")
+      if has_zen and zen.active then
+        vim.cmd("ZenMode")
+      end
+      if has_twilight and require("twilight.view").is_open() then
+        vim.cmd("Twilight")
+      end
     end)
     vim.notify("Focus Mode Disabled", vim.log.levels.INFO)
   end

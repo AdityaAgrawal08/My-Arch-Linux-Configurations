@@ -7,38 +7,33 @@ return {
     config = function()
       -- The new nvim-treesitter is a parser installer only.
       -- Highlight and indent are built into Neovim via vim.treesitter.
-      require("nvim-treesitter").setup({})
-
       -- Enable treesitter-based highlighting and indentation (built-in)
       vim.api.nvim_create_autocmd("FileType", {
         callback = function(args)
-          if vim.treesitter.start then
+          local ft = vim.bo[args.buf].filetype
+          if ft == "" or ft == "help" or ft == "qf" or ft == "checkhealth" then
+            return
+          end
+          local lang = vim.treesitter.language.get_lang(ft)
+          if lang and vim.treesitter.start then
             pcall(vim.treesitter.start, args.buf)
           end
         end,
       })
 
-      -- Auto-install parsers on first load
-      local parsers = {
-        -- Core
-        "lua", "vim", "vimdoc", "query", "regex",
-        -- Markup / Data
-        "markdown", "markdown_inline", "html", "css", "json", "yaml", "toml", "latex",
-        -- Your languages
-        "c", "cpp", "java", "kotlin", "dart", "python", "go", "gomod", "gosum",
-        "javascript", "typescript", "tsx",
-        -- Shell / Config
-        "bash", "dockerfile", "gitignore",
-      }
-
-      local installed = require("nvim-treesitter").get_installed()
-      local to_install = vim.tbl_filter(function(p)
-        return not vim.list_contains(installed, p)
-      end, parsers)
-
-      if #to_install > 0 then
-        require("nvim-treesitter").install(to_install)
-      end
+      require("nvim-treesitter").setup({
+        ensure_installed = {
+          -- Core
+          "lua", "vim", "vimdoc", "query", "regex",
+          -- Markup / Data
+          "markdown", "markdown_inline", "html", "css", "json", "yaml", "toml", "latex",
+          -- Your languages
+          "c", "cpp", "java", "kotlin", "dart", "python", "go", "gomod", "gosum",
+          "javascript", "typescript", "tsx",
+          -- Shell / Config
+          "bash", "dockerfile", "gitignore",
+        },
+      })
     end,
   },
 
