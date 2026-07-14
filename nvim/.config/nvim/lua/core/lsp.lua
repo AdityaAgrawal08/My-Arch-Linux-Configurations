@@ -4,7 +4,7 @@ M.on_attach = function(client, bufnr)
   local map = vim.keymap.set
   local opts = { buffer = bufnr, silent = true }
 
-  if client.name == "ts_ls" then
+  if client.name == "ts_ls" or client.name == "tsserver" then
     client.server_capabilities.documentFormattingProvider = false
   end
 
@@ -15,14 +15,15 @@ M.on_attach = function(client, bufnr)
   map("n", "<C-.>", vim.lsp.buf.code_action, opts)
   map("n", "<leader>rn", vim.lsp.buf.rename, opts)
 
+  -- Auto Import keymaps
+  map("n", "<M-CR>", "<cmd>AutoImport<CR>", opts)
+  map("n", "<leader>ai", "<cmd>AutoImport<CR>", opts)
+
   map("n", "<leader>f", function()
-    vim.lsp.buf.format({ async = false })
+    require("core.autoimport").format_and_organize()
   end, opts)
 
-  -- Example: disable formatting for some servers if needed
-  if client.name == "tsserver" then
-    client.server_capabilities.documentFormattingProvider = false
-  end
+
 end
 
 return M

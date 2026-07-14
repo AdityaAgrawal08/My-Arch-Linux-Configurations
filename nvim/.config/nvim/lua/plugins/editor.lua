@@ -10,10 +10,11 @@ return {
       require("nvim-treesitter").setup({})
 
       -- Enable treesitter-based highlighting and indentation (built-in)
-      vim.treesitter.start = vim.treesitter.start or function() end -- guard
       vim.api.nvim_create_autocmd("FileType", {
         callback = function(args)
-          pcall(vim.treesitter.start, args.buf)
+          if vim.treesitter.start then
+            pcall(vim.treesitter.start, args.buf)
+          end
         end,
       })
 
