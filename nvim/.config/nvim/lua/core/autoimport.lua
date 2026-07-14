@@ -519,6 +519,7 @@ local function java_organize_imports(bufnr)
   if not client then return false end
 
   local done = false
+  local success = false
   client.request("workspace/executeCommand", {
     command = "java.edit.organizeImports",
     arguments = { vim.uri_from_bufnr(bufnr) }
@@ -527,13 +528,14 @@ local function java_organize_imports(bufnr)
       vim.notify("AutoImport: java organizeImports failed: " .. tostring(err.message), vim.log.levels.ERROR)
     elseif result then
       vim.lsp.util.apply_workspace_edit(result, client.offset_encoding)
+      success = true
     end
     done = true
   end)
 
   -- Wait for up to 1000ms synchronously
   vim.wait(1000, function() return done end, 20)
-  return true
+  return success
 end
 
 -- Public: Organize imports in current buffer

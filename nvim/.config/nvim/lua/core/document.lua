@@ -1,5 +1,18 @@
 local M = {}
 
+local function get_char_len(str, byte_pos)
+  if byte_pos > #str then return 0 end
+  local next_pos = byte_pos + 1
+  while next_pos <= #str do
+    local byte = string.byte(str, next_pos)
+    if byte < 128 or byte >= 192 then
+      break
+    end
+    next_pos = next_pos + 1
+  end
+  return next_pos - byte_pos
+end
+
 -- Custom formatting helper functions
 local function toggle_wrap(prefix, suffix)
   suffix = suffix or prefix
@@ -16,9 +29,12 @@ local function toggle_wrap(prefix, suffix)
     
     if #lines == 1 then
       local line = lines[1]
+      local char_len = get_char_len(line, end_col)
+      local actual_end = end_col + char_len - 1
+      
       local before = string.sub(line, 1, start_col - 1)
-      local selected = string.sub(line, start_col, end_col)
-      local after = string.sub(line, end_col + 1)
+      local selected = string.sub(line, start_col, actual_end)
+      local after = string.sub(line, actual_end + 1)
       
       if string.sub(selected, 1, #prefix) == prefix and string.sub(selected, -#suffix) == suffix then
         selected = string.sub(selected, #prefix + 1, -#suffix - 1)
@@ -27,8 +43,12 @@ local function toggle_wrap(prefix, suffix)
       end
       vim.api.nvim_buf_set_lines(0, start_line - 1, start_line, false, { before .. selected .. after })
     else
+      local end_line_text = lines[#lines]
+      local char_len = get_char_len(end_line_text, end_col)
+      local actual_end = end_col + char_len - 1
+      
       lines[1] = string.sub(lines[1], 1, start_col - 1) .. prefix .. string.sub(lines[1], start_col)
-      lines[#lines] = string.sub(lines[#lines], 1, end_col) .. suffix .. string.sub(lines[#lines], end_col + 1)
+      lines[#lines] = string.sub(lines[#lines], 1, actual_end) .. suffix .. string.sub(lines[#lines], actual_end + 1)
       vim.api.nvim_buf_set_lines(0, start_line - 1, end_line, false, lines)
     end
   else
