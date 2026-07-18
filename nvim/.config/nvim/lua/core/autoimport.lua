@@ -27,6 +27,8 @@ local unresolved_patterns = {
   "unknown symbol",
   "use of undeclared",
   "is not defined",
+  "cannot find symbol",
+  "must be imported",
 }
 
 -- LSP-specific regex patterns to identify import actions
@@ -126,7 +128,7 @@ local function apply_action(action, client_id)
   elseif action.command then
     local cmd = action.command
     if type(cmd) == "table" then
-      client.request("workspace/executeCommand", cmd, function(err, result)
+      client:request("workspace/executeCommand", cmd, function(err, result)
         if err then
           vim.notify("AutoImport: Error executing command: " .. tostring(err.message), vim.log.levels.ERROR)
         end
@@ -137,7 +139,7 @@ local function apply_action(action, client_id)
       command = action.command,
       arguments = action.arguments,
     }
-    client.request("workspace/executeCommand", params, function(err, result)
+    client:request("workspace/executeCommand", params, function(err, result)
       if err then
         vim.notify("AutoImport: Error executing command: " .. tostring(err.message), vim.log.levels.ERROR)
       end
@@ -293,7 +295,7 @@ function M.trigger_auto_import()
 
   for _, client in ipairs(clients) do
     local c = client
-    c.request("textDocument/codeAction", params, function(err, result)
+    c:request("textDocument/codeAction", params, function(err, result)
       completed = completed + 1
       if not err and result then
         for _, action in ipairs(result) do
@@ -386,7 +388,7 @@ local function auto_import_on_cursor_line()
 
   for _, client in ipairs(clients) do
     local c = client
-    c.request("textDocument/codeAction", params, function(err, result)
+    c:request("textDocument/codeAction", params, function(err, result)
       completed = completed + 1
       if not err and result then
         for _, action in ipairs(result) do
@@ -412,17 +414,19 @@ end
 
 -- Debounced diagnostic event triggers
 local timer = nil
-local function debounce_auto_import()
+local function debounce_auto_import(bufnr)
   if timer then
-    timer:stop()
-    timer:close()
+    pcall(function()
+      timer:stop()
+      timer:close()
+    end)
     timer = nil
   end
   timer = vim.loop.new_timer()
   timer:start(1000, 0, function()
     vim.schedule(function()
-      if timer and M.config.auto_import_while_typing then
-        auto_import_on_cursor_line()
+      if timer and M.config.auto_import_while_typing and vim.api.nvim_buf_is_valid(bufnr) then
+        M.auto_import_all_unresolved(bufnr)
       end
     end)
   end)
@@ -454,7 +458,7 @@ local function ts_organize_imports(bufnr)
           return true
         elseif action.command then
           local target_client = resp_client or client
-          target_client.request("workspace/executeCommand", action.command, function(err)
+          target_client:request("workspace/executeCommand", action.command, function(err)
             if err then
               vim.notify("AutoImport: typescript organizeImports action failed: " .. tostring(err.message), vim.log.levels.ERROR)
             end
@@ -466,7 +470,7 @@ local function ts_organize_imports(bufnr)
   end
 
   -- Fallback command
-  client.request("workspace/executeCommand", {
+  client:request("workspace/executeCommand", {
     command = "_typescript.organizeImports",
     arguments = { vim.api.nvim_buf_get_name(bufnr) },
   }, function(err)
@@ -499,7 +503,7 @@ local function go_organize_imports(bufnr)
             return true
           elseif action.command then
             local target_client = resp_client or client
-            target_client.request("workspace/executeCommand", action.command, function(err)
+            target_client:request("workspace/executeCommand", action.command, function(err)
               if err then
                 vim.notify("AutoImport: go organizeImports action failed: " .. tostring(err.message), vim.log.levels.ERROR)
               end
@@ -520,7 +524,7 @@ local function java_organize_imports(bufnr)
 
   local done = false
   local success = false
-  client.request("workspace/executeCommand", {
+  client:request("workspace/executeCommand", {
     command = "java.edit.organizeImports",
     arguments = { vim.uri_from_bufnr(bufnr) }
   }, function(err, result)
@@ -563,7 +567,7 @@ function M.run_organize_imports(bufnr)
             if action.edit then
               vim.lsp.util.apply_workspace_edit(action.edit, client.offset_encoding)
             elseif action.command then
-              client.request("workspace/executeCommand", action.command, function(err)
+              client:request("workspace/executeCommand", action.command, function(err)
                 if err then
                   vim.notify("AutoImport: general organizeImports action failed: " .. tostring(err.message), vim.log.levels.ERROR)
                 end
@@ -579,6 +583,9 @@ end
 -- Resolve all unique unresolved diagnostics in a buffer
 function M.auto_import_all_unresolved(bufnr)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
+  if not vim.api.nvim_buf_is_valid(bufnr) or not vim.bo[bufnr].modifiable or vim.bo[bufnr].buftype ~= "" then
+    return
+  end
   local diagnostics = vim.diagnostic.get(bufnr)
   local unresolved = {}
   for _, d in ipairs(diagnostics) do
@@ -622,7 +629,7 @@ function M.auto_import_all_unresolved(bufnr)
     for _, client in ipairs(clients) do
       local c = client
       total_requests = total_requests + 1
-      c.request("textDocument/codeAction", params, function(err, result)
+      c:request("textDocument/codeAction", params, function(err, result)
         completed_count = completed_count + 1
         if not err and result then
           local import_actions = {}
@@ -688,17 +695,12 @@ local function setup_autocmds()
     end,
   })
 
-  -- On-type trigger (via diagnostic updates)
+  -- On-type and post-diagnostic trigger (via diagnostic updates)
   vim.api.nvim_create_autocmd("DiagnosticChanged", {
     group = group,
     callback = function(args)
       if not M.config.auto_import_while_typing then return end
-      if args.buf ~= vim.api.nvim_get_current_buf() then return end
-
-      local mode = vim.api.nvim_get_mode().mode
-      if mode == "n" or mode == "i" then
-        debounce_auto_import()
-      end
+      debounce_auto_import(args.buf)
     end,
   })
 

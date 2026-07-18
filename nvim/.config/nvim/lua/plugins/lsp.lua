@@ -93,6 +93,25 @@ return {
         },
       })
 
+      vim.lsp.config("jdtls", {
+        root_dir = function(fname)
+          local root_files = {
+            "pom.xml",
+            "build.gradle",
+            "settings.gradle",
+            "mvnw",
+            "gradlew",
+            ".git",
+          }
+          local root = vim.fs.find(root_files, { path = fname, upward = true })[1]
+          if root then
+            return vim.fs.dirname(root)
+          end
+          -- Fallback to the file's directory so it always starts
+          return vim.fs.dirname(fname)
+        end,
+      })
+
       vim.lsp.config("gopls", {
         settings = {
           gopls = {

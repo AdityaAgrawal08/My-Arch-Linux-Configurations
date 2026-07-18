@@ -73,3 +73,87 @@ vim.api.nvim_create_autocmd("FileType", {
     require("core.document").setup(event.buf)
   end,
 })
+
+-- Automatically populate Java package and class template for new files
+vim.api.nvim_create_autocmd("BufNewFile", {
+  pattern = "*.java",
+  callback = function(args)
+    local filepath = vim.api.nvim_buf_get_name(args.buf)
+    if filepath == "" then return end
+
+    -- Normalize slashes
+    filepath = filepath:gsub("\\", "/")
+
+    -- 1. Find the project root
+    local root_files = { ".git", "pom.xml", "build.gradle", "settings.gradle", ".project" }
+    local root_match = vim.fs.find(root_files, { path = filepath, upward = true })[1]
+    local project_root = root_match and vim.fs.dirname(root_match) or nil
+
+    local package_path = ""
+
+    if project_root then
+      -- Normalize project root slashes
+      project_root = project_root:gsub("\\", "/")
+      local dirpath = vim.fn.fnamemodify(filepath, ":h")
+      
+      -- If the file is inside the project root, extract the relative path
+      if dirpath:sub(1, #project_root) == project_root then
+        local rel_dir = dirpath:sub(#project_root + 2) -- +2 to skip separator
+        
+        -- Strip standard Java source directory prefixes
+        local prefixes = {
+          "src/main/java/",
+          "src/test/java/",
+          "src/",
+          "lib/",
+        }
+        package_path = rel_dir
+        for _, prefix in ipairs(prefixes) do
+          if rel_dir:sub(1, #prefix) == prefix then
+            package_path = rel_dir:sub(#prefix + 1)
+            break
+          end
+        end
+      end
+    else
+      -- Fallback to standard segment match if no root marker is found
+      local patterns = {
+        "/src/main/java/",
+        "/src/test/java/",
+        "/src/",
+      }
+      for _, pattern in ipairs(patterns) do
+        local start_idx, end_idx = filepath:find(pattern, 1, true)
+        if start_idx then
+          local remaining = filepath:sub(end_idx + 1)
+          local last_slash = remaining:find("/[^/]*$")
+          if last_slash then
+            package_path = remaining:sub(1, last_slash - 1)
+          end
+          break
+        end
+      end
+    end
+
+    -- Extract class/filename
+    local filename = vim.fn.fnamemodify(filepath, ":t:r")
+    if filename == "" then return end
+
+    local lines = {}
+    if package_path and package_path ~= "" then
+      local package_name = package_path:gsub("/", ".")
+      table.insert(lines, "package " .. package_name .. ";")
+      table.insert(lines, "")
+    end
+
+    table.insert(lines, "public class " .. filename .. " {")
+    table.insert(lines, "    ")
+    table.insert(lines, "}")
+
+    vim.api.nvim_buf_set_lines(args.buf, 0, -1, false, lines)
+
+    -- Move cursor inside class body
+    local cursor_line = (package_path and package_path ~= "") and 4 or 2
+    pcall(vim.api.nvim_win_set_cursor, 0, { cursor_line, 4 })
+  end,
+})
