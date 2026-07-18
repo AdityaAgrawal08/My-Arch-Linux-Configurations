@@ -94,7 +94,9 @@ return {
       })
 
       vim.lsp.config("jdtls", {
-        root_dir = function(fname)
+        root_dir = function(bufnr)
+          local fname = vim.api.nvim_buf_get_name(bufnr)
+          if fname == "" then return nil end
           local root_files = {
             "pom.xml",
             "build.gradle",
