@@ -29,6 +29,8 @@ local unresolved_patterns = {
   "is not defined",
   "cannot find symbol",
   "must be imported",
+  "does not match the expected package",
+  "declared package",
 }
 
 -- LSP-specific regex patterns to identify import actions
@@ -59,6 +61,8 @@ local import_patterns = {
   jdtls = {
     "Import '.-'",
     "Import ",
+    "Correct package declaration",
+    "Correct package",
   },
   kotlin_language_server = {
     "Import ",
@@ -123,25 +127,34 @@ local function apply_action(action, client_id)
   local client = vim.lsp.get_client_by_id(client_id)
   if not client then return end
 
-  if action.edit then
-    vim.lsp.util.apply_workspace_edit(action.edit, client.offset_encoding)
-  elseif action.command then
-    local cmd = action.command
-    if type(cmd) == "table" then
-      client:request("workspace/executeCommand", cmd, function(err, result)
-        if err then
-          vim.notify("AutoImport: Error executing command: " .. tostring(err.message), vim.log.levels.ERROR)
-        end
-      end)
+  if action.edit or action.command then
+    if action.edit then
+      vim.lsp.util.apply_workspace_edit(action.edit, client.offset_encoding)
+    elseif action.command then
+      local cmd = action.command
+      if type(cmd) == "table" then
+        client:request("workspace/executeCommand", cmd, function(err, result)
+          if err then
+            vim.notify("AutoImport: Error executing command: " .. tostring(err.message), vim.log.levels.ERROR)
+          end
+        end)
+      elseif type(cmd) == "string" then
+        local params = {
+          command = action.command,
+          arguments = action.arguments,
+        }
+        client:request("workspace/executeCommand", params, function(err, result)
+          if err then
+            vim.notify("AutoImport: Error executing command: " .. tostring(err.message), vim.log.levels.ERROR)
+          end
+        end)
+      end
     end
-  elseif type(action.command) == "string" then
-    local params = {
-      command = action.command,
-      arguments = action.arguments,
-    }
-    client:request("workspace/executeCommand", params, function(err, result)
-      if err then
-        vim.notify("AutoImport: Error executing command: " .. tostring(err.message), vim.log.levels.ERROR)
+  else
+    -- Try to resolve the action if it's unresolved
+    client:request("codeAction/resolve", action, function(err, resolved_action)
+      if not err and resolved_action then
+        apply_action(resolved_action, client_id)
       end
     end)
   end

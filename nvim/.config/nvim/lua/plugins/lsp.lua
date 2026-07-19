@@ -42,8 +42,8 @@ return {
           -- LaTeX
           "texlab",
         },
-        -- Automatically call vim.lsp.enable() for installed servers
-        automatic_enable = true,
+        -- Disable automatic enable to avoid conflicts with setup_handlers
+        automatic_enable = false,
       })
     end,
   },
@@ -51,7 +51,7 @@ return {
   -- LSP configuration (via Neovim 0.11 native vim.lsp.config API)
   {
     "neovim/nvim-lspconfig",
-    event = { "BufReadPre", "BufNewFile" },
+    lazy = false,
     dependencies = {
       "hrsh7th/cmp-nvim-lsp",
       "j-hui/fidget.nvim",
@@ -73,102 +73,120 @@ return {
       -- Diagnostics panel
       require("trouble").setup({})
 
-      -- Shared config applied to ALL servers via the wildcard "*"
-      vim.lsp.config("*", {
-        on_attach = on_attach,
-        capabilities = capabilities,
-      })
-
-      -- Server-specific settings
-      vim.lsp.config("lua_ls", {
-        settings = {
-          Lua = {
-            diagnostics = { globals = { "vim" } },
-            workspace = {
-              checkThirdParty = false,
-              library = vim.api.nvim_get_runtime_file("", true),
-            },
-            telemetry = { enable = false },
-          },
-        },
-      })
-
-      vim.lsp.config("jdtls", {
-        root_dir = function(bufnr)
-          local fname = vim.api.nvim_buf_get_name(bufnr)
-          if fname == "" then return nil end
-          local root_files = {
-            "pom.xml",
-            "build.gradle",
-            "settings.gradle",
-            "mvnw",
-            "gradlew",
-            ".git",
-          }
-          local root = vim.fs.find(root_files, { path = fname, upward = true })[1]
-          if root then
-            return vim.fs.dirname(root)
+      -- Register custom keymaps and settings on LspAttach
+      vim.api.nvim_create_autocmd("LspAttach", {
+        callback = function(args)
+          local client = vim.lsp.get_client_by_id(args.data.client_id)
+          if client then
+            on_attach(client, args.buf)
           end
-          -- Fallback to the file's directory so it always starts
-          return vim.fs.dirname(fname)
         end,
       })
 
-      vim.lsp.config("gopls", {
-        settings = {
-          gopls = {
-            analyses = {
-              unusedparams = true,
-              shadow = true,
-            },
-            staticcheck = true,
-            gofumpt = true,
-          },
-        },
-      })
-
-      vim.lsp.config("pyright", {
-        settings = {
-          python = {
-            analysis = {
-              typeCheckingMode = "basic",
-              autoSearchPaths = true,
-              useLibraryCodeForTypes = true,
+      -- Server-specific settings overrides
+      local server_settings = {
+        lua_ls = {
+          settings = {
+            Lua = {
+              diagnostics = { globals = { "vim" } },
+              workspace = {
+                checkThirdParty = false,
+                library = vim.api.nvim_get_runtime_file("", true),
+              },
+              telemetry = { enable = false },
             },
           },
         },
-      })
-
-      vim.lsp.config("clangd", {
-        cmd = {
-          "clangd",
-          "--background-index",
-          "--clang-tidy",
-          "--header-insertion=iwyu",
-          "--completion-style=detailed",
-          "--function-arg-placeholders=true",
-        },
-      })
-
-      vim.lsp.config("ts_ls", {
-        settings = {
-          typescript = {
-            inlayHints = {
-              includeInlayParameterNameHints = "all",
-              includeInlayFunctionParameterTypeHints = true,
-              includeInlayVariableTypeHints = true,
+        gopls = {
+          settings = {
+            gopls = {
+              analyses = {
+                unusedparams = true,
+                shadow = true,
+              },
+              staticcheck = true,
+              gofumpt = true,
             },
           },
         },
-      })
-
-      vim.lsp.config("jsonls", {
-        settings = {
-          json = {
-            validate = { enable = true },
+        pyright = {
+          settings = {
+            python = {
+              analysis = {
+                typeCheckingMode = "basic",
+                autoSearchPaths = true,
+                useLibraryCodeForTypes = true,
+              },
+            },
           },
         },
+        clangd = {
+          cmd = {
+            "clangd",
+            "--background-index",
+            "--clang-tidy",
+            "--header-insertion=iwyu",
+            "--completion-style=detailed",
+            "--function-arg-placeholders=true",
+          },
+        },
+        ts_ls = {
+          settings = {
+            typescript = {
+              inlayHints = {
+                includeInlayParameterNameHints = "all",
+                includeInlayFunctionParameterTypeHints = true,
+                includeInlayVariableTypeHints = true,
+              },
+            },
+          },
+        },
+        jsonls = {
+          settings = {
+            json = {
+              validate = { enable = true },
+            },
+          },
+        },
+        jdtls = {
+          cmd = { "jdtls" },
+          root_dir = function(bufnr, callback)
+            local fname = vim.api.nvim_buf_get_name(bufnr)
+            if fname == "" then
+              if callback then callback(nil) end
+              return nil
+            end
+            local root_files = {
+              "pom.xml",
+              "build.gradle",
+              "settings.gradle",
+              "mvnw",
+              "gradlew",
+              ".git",
+            }
+            local root = vim.fs.find(root_files, { path = fname, upward = true })[1]
+            local resolved = root and vim.fs.dirname(root) or vim.fs.dirname(fname)
+            if callback then
+              callback(resolved)
+            end
+            return resolved
+          end,
+        },
+      }
+
+      -- Set default capabilities globally for all servers
+      vim.lsp.config("*", {
+        capabilities = capabilities,
       })
+
+      -- Apply overrides and enable all installed servers natively
+      local mason_lspconfig = require("mason-lspconfig")
+      for _, server_name in ipairs(mason_lspconfig.get_installed_servers()) do
+        if server_settings[server_name] then
+          vim.lsp.config(server_name, server_settings[server_name])
+        end
+        vim.lsp.enable(server_name)
+      end
     end,
   },
 
