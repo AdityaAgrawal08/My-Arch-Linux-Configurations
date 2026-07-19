@@ -7,20 +7,6 @@ return {
     config = function()
       -- The new nvim-treesitter is a parser installer only.
       -- Highlight and indent are built into Neovim via vim.treesitter.
-      -- Enable treesitter-based highlighting and indentation (built-in)
-      vim.api.nvim_create_autocmd("FileType", {
-        callback = function(args)
-          local ft = vim.bo[args.buf].filetype
-          if ft == "" or ft == "help" or ft == "qf" or ft == "checkhealth" then
-            return
-          end
-          local lang = vim.treesitter.language.get_lang(ft)
-          if lang and vim.treesitter.start then
-            pcall(vim.treesitter.start, args.buf)
-          end
-        end,
-      })
-
       require("nvim-treesitter").setup({
         ensure_installed = {
           -- Core
@@ -161,6 +147,12 @@ return {
           typescriptreact = { "prettier" },
           -- LaTeX
           tex = { "latexindent" },
+          -- Rust & Zig
+          rust = { "rustfmt" },
+          zig = { "zigfmt" },
+          -- Shell
+          sh = { "shfmt" },
+          bash = { "shfmt" },
         },
         format_on_save = {
           timeout_ms = 2000,

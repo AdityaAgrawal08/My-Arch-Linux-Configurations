@@ -2,6 +2,7 @@ return {
   -- Mason: package manager for LSP servers, formatters, linters
   {
     "williamboman/mason.nvim",
+    lazy = false,
     build = ":MasonUpdate",
     config = function()
       require("mason").setup({
@@ -17,63 +18,57 @@ return {
     end,
   },
 
-  -- Mason-lspconfig bridge (new API: automatic_enable via vim.lsp.enable)
+  -- Mason-lspconfig bridge (managed synchronously to ensure correct startup order)
   {
     "williamboman/mason-lspconfig.nvim",
+    lazy = false,
     dependencies = { "williamboman/mason.nvim", "neovim/nvim-lspconfig" },
-    config = function()
-      require("mason-lspconfig").setup({
-        ensure_installed = {
-          -- Lua
-          "lua_ls",
-          -- Web
-          "html", "cssls", "jsonls",
-          "ts_ls", "vtsls",
-          -- C / C++
-          "clangd",
-          -- Python
-          "pyright",
-          -- Go
-          "gopls",
-          -- Java
-          "jdtls",
-          -- Kotlin
-          "kotlin_language_server",
-          -- LaTeX
-          "texlab",
-          -- Rust
-          "rust_analyzer",
-          -- Zig
-          "zls",
-          -- PHP
-          "intelephense",
-          -- C#
-          "csharp_ls",
-        },
-        -- Disable automatic enable to avoid conflicts with setup_handlers
-        automatic_enable = false,
-      })
-    end,
   },
 
-  -- LSP configuration (via Neovim 0.11 native vim.lsp.config API)
+  -- LSP configuration
   {
     "neovim/nvim-lspconfig",
     lazy = false,
     dependencies = {
+      "williamboman/mason.nvim",
       "saghen/blink.cmp",
       "j-hui/fidget.nvim",
       "folke/trouble.nvim",
     },
 
     config = function()
+      -- Force load lspconfig plugin definitions to populate vim.lsp.config template database early
+      vim.cmd("runtime! plugin/lspconfig.lua")
+
       local capabilities = require("blink.cmp").get_lsp_capabilities()
       local on_attach = require("core.lsp").on_attach
 
-      -- Enable folding capabilities for nvim-ufo
-      capabilities.textDocument.foldingRange = {
+      -- Explicitly negotiate advanced workspace/symbol and editor capabilities
+      capabilities.workspace = capabilities.workspace or {}
+      capabilities.workspace.symbol = {
         dynamicRegistration = false,
-        lineFoldingOnly = true,
+        symbolKind = {
+          valueSet = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26 }
+        }
+      }
+      capabilities.textDocument = capabilities.textDocument or {}
+      capabilities.textDocument.semanticTokens = {
+        dynamicRegistration = false,
+        tokenTypes = { "namespace", "type", "class", "enum", "interface", "struct", "typeParameter", "parameter", "variable", "property", "enumMember", "event", "function", "method", "macro", "keyword", "modifier", "comment", "string", "number", "regexp", "operator", "decorator" },
+        tokenModifiers = { "declaration", "definition", "readonly", "static", "deprecated", "abstract", "async", "modification", "documentation", "defaultLibrary" },
+        formats = { "relative" },
+        requests = {
+          range = true,
+          full = { delta = true }
+        },
+        overlappingTokenSupport = true,
+        multilineTokenSupport = true
+      }
+      capabilities.textDocument.inlayHint = {
+        dynamicRegistration = true,
+        resolveSupport = {
+          properties = { "textEdits", "tooltip", "location", "command" }
+        }
       }
 
       -- Progress indicator
@@ -83,12 +78,48 @@ return {
 
       -- Register custom keymaps and settings on LspAttach
       vim.api.nvim_create_autocmd("LspAttach", {
+        group = vim.api.nvim_create_augroup("LspAttachGroup", { clear = true }),
         callback = function(args)
           local client = vim.lsp.get_client_by_id(args.data.client_id)
           if client then
             on_attach(client, args.buf)
           end
         end,
+      })
+
+      -- List of servers to configure and ensure installed
+      local servers = {
+        -- Lua
+        "lua_ls",
+        -- Web
+        "html", "cssls", "jsonls",
+        "vtsls",
+        -- C / C++
+        "clangd",
+        -- Python
+        "pyright",
+        -- Go
+        "gopls",
+        -- Java
+        "jdtls",
+        -- Kotlin
+        "kotlin_language_server",
+        -- LaTeX
+        "texlab",
+        -- Rust
+        "rust_analyzer",
+        -- Zig
+        "zls",
+        -- PHP
+        "intelephense",
+        -- C#
+        "omnisharp",
+      }
+
+      -- Initialize Mason-LSPConfig
+      require("mason-lspconfig").setup({
+        ensure_installed = servers,
+        automatic_enable = false,
       })
 
       -- Server-specific settings overrides
@@ -143,7 +174,7 @@ return {
             "--function-arg-placeholders=true",
           },
         },
-        ts_ls = {
+        vtsls = {
           settings = {
             typescript = {
               preferences = {
@@ -154,22 +185,6 @@ return {
                 includeInlayParameterNameHints = "all",
                 includeInlayFunctionParameterTypeHints = true,
                 includeInlayVariableTypeHints = true,
-              },
-            },
-            javascript = {
-              preferences = {
-                includePackageJsonAutoImports = "on",
-                importModuleSpecifierPreference = "non-relative",
-              },
-            },
-          },
-        },
-        vtsls = {
-          settings = {
-            typescript = {
-              preferences = {
-                includePackageJsonAutoImports = "on",
-                importModuleSpecifierPreference = "non-relative",
               },
             },
             javascript = {
@@ -212,7 +227,7 @@ return {
             },
           },
         },
-        csharp_ls = {},
+        omnisharp = {},
         jsonls = {
           settings = {
             json = {
@@ -222,6 +237,41 @@ return {
         },
         jdtls = {
           cmd = { "jdtls" },
+          settings = {
+            java = {
+              signatureHelp = { enabled = true },
+              contentProvider = { preferred = "fernflower" },
+              completion = {
+                favoriteStaticMembers = {
+                  "org.hamcrest.MatcherAssert.assertThat",
+                  "org.hamcrest.Matchers.*",
+                  "org.hamcrest.CoreMatchers.*",
+                  "org.junit.jupiter.api.Assertions.*",
+                  "java.util.Objects.requireNonNull",
+                  "java.util.Objects.requireNonNullElse",
+                  "org.mockito.Mockito.*"
+                },
+                importOrder = {
+                  "java",
+                  "javax",
+                  "com",
+                  "org"
+                }
+              },
+              sources = {
+                organizeImports = {
+                  starThreshold = 9999,
+                  staticStarThreshold = 9999,
+                },
+              },
+              codeGeneration = {
+                toString = {
+                  template = "${object.className}[${member.name()}=${member.value()}, ${otherMembers}]"
+                },
+                useBlocks = true,
+              },
+            },
+          },
           root_dir = function(bufnr, callback)
             local fname = vim.api.nvim_buf_get_name(bufnr)
             if fname == "" then
@@ -246,17 +296,15 @@ return {
         },
       }
 
-      -- Set default capabilities globally for all servers
-      vim.lsp.config("*", {
+      -- Base config configuration template
+      local default_config = {
         capabilities = capabilities,
-      })
+      }
 
-      -- Apply overrides and enable all installed servers natively
-      local mason_lspconfig = require("mason-lspconfig")
-      for _, server_name in ipairs(mason_lspconfig.get_installed_servers()) do
-        if server_settings[server_name] then
-          vim.lsp.config(server_name, server_settings[server_name])
-        end
+      -- Synchronously configure and enable all servers natively at startup
+      for _, server_name in ipairs(servers) do
+        local config = vim.tbl_deep_extend("force", {}, default_config, server_settings[server_name] or {})
+        vim.lsp.config(server_name, config)
         vim.lsp.enable(server_name)
       end
     end,
@@ -274,11 +322,6 @@ return {
     config = function()
       local capabilities = require("blink.cmp").get_lsp_capabilities()
       local on_attach = require("core.lsp").on_attach
-
-      capabilities.textDocument.foldingRange = {
-        dynamicRegistration = false,
-        lineFoldingOnly = true,
-      }
 
       require("flutter-tools").setup({
         lsp = {
