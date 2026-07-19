@@ -49,77 +49,80 @@ return {
 
   -- Completion
   {
-    "hrsh7th/nvim-cmp",
-    event = "InsertEnter",
+    "saghen/blink.cmp",
+    lazy = false, -- load early to provide capabilities to LSP
+    version = "v0.*",
     dependencies = {
-      "hrsh7th/cmp-nvim-lsp",
-      "hrsh7th/cmp-buffer",
-      "hrsh7th/cmp-path",
-      "saadparwaiz1/cmp_luasnip",
       "L3MON4D3/LuaSnip",
+      "rafamadriz/friendly-snippets",
     },
-    config = function()
-      local cmp = require("cmp")
-      local luasnip = require("luasnip")
-
-      cmp.setup({
-        snippet = {
-          expand = function(args)
-            luasnip.lsp_expand(args.body)
-          end,
+    opts = {
+      keymap = {
+        preset = "default",
+        ["<CR>"] = { "accept", "fallback" },
+        ["<Tab>"] = { "select_next", "snippet_forward", "fallback" },
+        ["<S-Tab>"] = { "select_prev", "snippet_backward", "fallback" },
+        ["<C-b>"] = { "scroll_documentation_up", "fallback" },
+        ["<C-f>"] = { "scroll_documentation_down", "fallback" },
+      },
+      snippets = {
+        preset = "luasnip",
+      },
+      sources = {
+        default = { "lsp", "path", "snippets", "buffer" },
+      },
+      completion = {
+        accept = {
+          auto_brackets = {
+            enabled = true,
+          },
         },
+        menu = {
+          border = "rounded",
+        },
+        documentation = {
+          auto_show = true,
+          auto_show_delay_ms = 200,
+          window = {
+            border = "rounded",
+          },
+        },
+      },
+      signature = {
+        enabled = true,
         window = {
-          completion = cmp.config.window.bordered(),
-          documentation = cmp.config.window.bordered(),
+          border = "rounded",
         },
-        mapping = {
-          ["<C-b>"] = cmp.mapping.scroll_docs(-4),
-          ["<C-f>"] = cmp.mapping.scroll_docs(4),
-          ["<C-Space>"] = cmp.mapping.complete(),
-          ["<C-e>"] = cmp.mapping.abort(),
-          ["<CR>"] = cmp.mapping.confirm({ select = true }),
-          ["<Tab>"] = cmp.mapping(function(fallback)
-            if cmp.visible() then
-              cmp.select_next_item()
-            elseif luasnip.expand_or_jumpable() then
-              luasnip.expand_or_jump()
-            else
-              fallback()
-            end
-          end, { "i", "s" }),
-          ["<S-Tab>"] = cmp.mapping(function(fallback)
-            if cmp.visible() then
-              cmp.select_prev_item()
-            elseif luasnip.jumpable(-1) then
-              luasnip.jump(-1)
-            else
-              fallback()
-            end
-          end, { "i", "s" }),
-        },
-        sources = cmp.config.sources({
-          { name = "nvim_lsp" },
-          { name = "luasnip" },
-        }, {
-          { name = "buffer" },
-          { name = "path" },
-        }),
-      })
-    end,
+      },
+    },
   },
 
-  -- Autopairs + cmp integration
+  -- Autopairs
   {
     "windwp/nvim-autopairs",
     event = "InsertEnter",
     config = function()
       require("nvim-autopairs").setup({})
-      local ok_cmp, cmp = pcall(require, "cmp")
-      if ok_cmp then
-        local cmp_autopairs = require("nvim-autopairs.completion.cmp")
-        cmp.event:on("confirm_done", cmp_autopairs.on_confirm_done())
-      end
     end,
+  },
+
+  -- Refactoring
+  {
+    "ThePrimeagen/refactoring.nvim",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "nvim-treesitter/nvim-treesitter",
+    },
+    keys = {
+      { "<leader>re", function() require("refactoring").refactor("Extract Function") end, mode = "v", desc = "Extract Function" },
+      { "<leader>rf", function() require("refactoring").refactor("Extract Function To File") end, mode = "v", desc = "Extract Function To File" },
+      { "<leader>rv", function() require("refactoring").refactor("Extract Variable") end, mode = "v", desc = "Extract Variable" },
+      { "<leader>ri", function() require("refactoring").refactor("Inline Variable") end, mode = { "n", "v" }, desc = "Inline Variable" },
+      { "<leader>rI", function() require("refactoring").refactor("Inline Function") end, mode = "n", desc = "Inline Function" },
+      { "<leader>rb", function() require("refactoring").refactor("Extract Block") end, mode = "n", desc = "Extract Block" },
+      { "<leader>rB", function() require("refactoring").refactor("Extract Block To File") end, mode = "n", desc = "Extract Block To File" },
+    },
+    opts = {},
   },
 
   -- Formatter: conform.nvim

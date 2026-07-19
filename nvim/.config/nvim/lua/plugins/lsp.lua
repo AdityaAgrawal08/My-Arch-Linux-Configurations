@@ -28,7 +28,7 @@ return {
           "lua_ls",
           -- Web
           "html", "cssls", "jsonls",
-          "ts_ls",
+          "ts_ls", "vtsls",
           -- C / C++
           "clangd",
           -- Python
@@ -41,6 +41,14 @@ return {
           "kotlin_language_server",
           -- LaTeX
           "texlab",
+          -- Rust
+          "rust_analyzer",
+          -- Zig
+          "zls",
+          -- PHP
+          "intelephense",
+          -- C#
+          "csharp_ls",
         },
         -- Disable automatic enable to avoid conflicts with setup_handlers
         automatic_enable = false,
@@ -53,13 +61,13 @@ return {
     "neovim/nvim-lspconfig",
     lazy = false,
     dependencies = {
-      "hrsh7th/cmp-nvim-lsp",
+      "saghen/blink.cmp",
       "j-hui/fidget.nvim",
       "folke/trouble.nvim",
     },
 
     config = function()
-      local capabilities = require("cmp_nvim_lsp").default_capabilities()
+      local capabilities = require("blink.cmp").get_lsp_capabilities()
       local on_attach = require("core.lsp").on_attach
 
       -- Enable folding capabilities for nvim-ufo
@@ -100,6 +108,9 @@ return {
         gopls = {
           settings = {
             gopls = {
+              completeUnimported = true,
+              deepCompletion = true,
+              usePlaceholders = true,
               analyses = {
                 unusedparams = true,
                 shadow = true,
@@ -113,9 +124,11 @@ return {
           settings = {
             python = {
               analysis = {
-                typeCheckingMode = "basic",
+                autoImportCompletions = true,
+                diagnosticMode = "workspace",
                 autoSearchPaths = true,
                 useLibraryCodeForTypes = true,
+                typeCheckingMode = "basic",
               },
             },
           },
@@ -133,14 +146,73 @@ return {
         ts_ls = {
           settings = {
             typescript = {
+              preferences = {
+                includePackageJsonAutoImports = "on",
+                importModuleSpecifierPreference = "non-relative",
+              },
               inlayHints = {
                 includeInlayParameterNameHints = "all",
                 includeInlayFunctionParameterTypeHints = true,
                 includeInlayVariableTypeHints = true,
               },
             },
+            javascript = {
+              preferences = {
+                includePackageJsonAutoImports = "on",
+                importModuleSpecifierPreference = "non-relative",
+              },
+            },
           },
         },
+        vtsls = {
+          settings = {
+            typescript = {
+              preferences = {
+                includePackageJsonAutoImports = "on",
+                importModuleSpecifierPreference = "non-relative",
+              },
+            },
+            javascript = {
+              preferences = {
+                includePackageJsonAutoImports = "on",
+                importModuleSpecifierPreference = "non-relative",
+              },
+            },
+          },
+        },
+        rust_analyzer = {
+          settings = {
+            ["rust-analyzer"] = {
+              completion = {
+                autoimport = { enable = true },
+              },
+              cargo = {
+                allFeatures = true,
+                loadOutDirsFromCheck = true,
+              },
+              procMacro = {
+                enable = true,
+              },
+            },
+          },
+        },
+        zls = {
+          settings = {
+            zls = {
+              enable_autobuild = true,
+            },
+          },
+        },
+        intelephense = {
+          settings = {
+            intelephense = {
+              completion = {
+                fullyQualifyGlobalConstantsAndFunctions = true,
+              },
+            },
+          },
+        },
+        csharp_ls = {},
         jsonls = {
           settings = {
             json = {
@@ -197,10 +269,10 @@ return {
     dependencies = {
       "nvim-lua/plenary.nvim",
       "neovim/nvim-lspconfig",
-      "hrsh7th/cmp-nvim-lsp",
+      "saghen/blink.cmp",
     },
     config = function()
-      local capabilities = require("cmp_nvim_lsp").default_capabilities()
+      local capabilities = require("blink.cmp").get_lsp_capabilities()
       local on_attach = require("core.lsp").on_attach
 
       capabilities.textDocument.foldingRange = {
