@@ -142,7 +142,14 @@ return {
         preset = "luasnip",
       },
       sources = {
-        default = { "lsp", "path", "snippets", "buffer" },
+        default = { "lsp", "path", "snippets", "buffer", "neighbors" },
+        providers = {
+          neighbors = {
+            name = "Neighbors",
+            module = "core.completion.neighbors",
+            score_offset = -1, -- Slightly lower priority than LSP
+          },
+        },
       },
       completion = {
         accept = {
