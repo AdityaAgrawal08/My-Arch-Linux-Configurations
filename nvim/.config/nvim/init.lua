@@ -2,7 +2,8 @@
 require("core.options")
 require("core.keymaps")
 require("core.autoimport").setup({
-  auto_import_while_typing = true,
+  auto_import_while_typing = false,
+  auto_import_on_diagnostics = false,
   auto_import_on_save = true,
   organize_imports_on_save = true,
 })
