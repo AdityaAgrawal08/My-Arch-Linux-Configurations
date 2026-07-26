@@ -4,6 +4,7 @@ local M = {}
 M.config = {
   organize_imports_on_save = true,
   auto_import_on_save = true,
+  auto_import_on_diagnostics = true,
   ui = {
     prefer_telescope = true,
   },
@@ -430,6 +431,22 @@ function M.format_and_organize()
   end
 end
 
+-- Debounce auto-import on diagnostics changes to prevent duplicate requests/freezes
+local debounce_timer = nil
+local function debounce_auto_import(bufnr)
+  if debounce_timer then
+    debounce_timer:stop()
+    debounce_timer:close()
+    debounce_timer = nil
+  end
+
+  debounce_timer = vim.uv.new_timer()
+  debounce_timer:start(500, 0, vim.schedule_wrap(function()
+    debounce_timer = nil
+    M.auto_import_all_unresolved(bufnr)
+  end))
+end
+
 -- Setup API & autocmds
 function M.setup(opts)
   M.config = vim.tbl_deep_extend("force", M.config, opts or {})
@@ -449,6 +466,16 @@ function M.setup(opts)
       end
       if M.config.auto_import_on_save then
         M.auto_import_all_unresolved(args.buf)
+      end
+    end,
+  })
+
+  -- Debounced auto-import on DiagnosticChanged
+  vim.api.nvim_create_autocmd("DiagnosticChanged", {
+    group = group,
+    callback = function(args)
+      if M.config.auto_import_on_diagnostics then
+        debounce_auto_import(args.buf)
       end
     end,
   })
