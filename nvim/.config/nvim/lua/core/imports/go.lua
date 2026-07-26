@@ -4,7 +4,7 @@ function M.organize_imports(bufnr)
   local client = vim.lsp.get_clients({ bufnr = bufnr, name = "gopls" })[1]
   if not client then return false end
 
-  local params = vim.lsp.util.make_range_params()
+  local params = vim.lsp.util.make_range_params(0, client.offset_encoding or "utf-16")
   params.context = { only = { "source.organizeImports" } }
   local response = vim.lsp.buf_request_sync(bufnr, "textDocument/codeAction", params, 200)
   if response then

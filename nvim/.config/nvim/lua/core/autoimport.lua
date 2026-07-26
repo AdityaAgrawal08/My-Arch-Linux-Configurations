@@ -242,7 +242,7 @@ function M.auto_import_all_unresolved(bufnr)
 
   for i = 1, limit do
     local d = unresolved[i]
-    local params = vim.lsp.util.make_range_params()
+    local params = vim.lsp.util.make_range_params(0, clients[1] and clients[1].offset_encoding or "utf-16")
     params.range = {
       start = { line = d.lnum, character = d.col },
       ["end"] = { line = d.end_lnum or d.lnum, character = d.end_col or d.col },
@@ -296,7 +296,7 @@ function M.trigger_auto_import()
     return
   end
 
-  local params = vim.lsp.util.make_range_params()
+  local params = vim.lsp.util.make_range_params(0, clients[1] and clients[1].offset_encoding or "utf-16")
   
   -- Get diagnostics under the cursor
   local line, col = unpack(vim.api.nvim_win_get_cursor(0))
@@ -395,7 +395,8 @@ function M.run_organize_imports(bufnr)
     success = require("core.imports.java").organize_imports(bufnr)
   else
     -- Fallback generic organize imports
-    local params = vim.lsp.util.make_range_params()
+    local clients = vim.lsp.get_clients({ bufnr = bufnr })
+    local params = vim.lsp.util.make_range_params(0, clients[1] and clients[1].offset_encoding or "utf-16")
     params.context = { only = { "source.organizeImports" } }
     local response = vim.lsp.buf_request_sync(bufnr, "textDocument/codeAction", params, 200)
     if response then
