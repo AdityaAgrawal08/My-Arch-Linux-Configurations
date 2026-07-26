@@ -29,51 +29,84 @@ return {
     event = { "BufReadPost", "BufNewFile" },
     dependencies = { "nvim-treesitter/nvim-treesitter" },
     config = function()
-      require("nvim-treesitter.configs").setup({
-        textobjects = {
-          select = {
-            enable = true,
-            lookahead = true,
-            keymaps = {
-              ["af"] = "@function.outer",
-              ["if"] = "@function.inner",
-              ["ac"] = "@class.outer",
-              ["ic"] = "@class.inner",
-              ["aP"] = "@parameter.outer",
-              ["iP"] = "@parameter.inner",
+      local ok, ts_configs = pcall(require, "nvim-treesitter.configs")
+      if ok then
+        ts_configs.setup({
+          textobjects = {
+            select = {
+              enable = true,
+              lookahead = true,
+              keymaps = {
+                ["af"] = "@function.outer",
+                ["if"] = "@function.inner",
+                ["ac"] = "@class.outer",
+                ["ic"] = "@class.inner",
+                ["aP"] = "@parameter.outer",
+                ["iP"] = "@parameter.inner",
+              },
+            },
+            move = {
+              enable = true,
+              set_jumps = true,
+              goto_next_start = {
+                ["]]"] = "@function.outer",
+                ["]m"] = "@class.outer",
+              },
+              goto_next_end = {
+                ["]["] = "@function.outer",
+                ["]M"] = "@class.outer",
+              },
+              goto_previous_start = {
+                ["[["] = "@function.outer",
+                ["[m"] = "@class.outer",
+              },
+              goto_previous_end = {
+                ["[]"] = "@function.outer",
+                ["[M"] = "@class.outer",
+              },
+            },
+            swap = {
+              enable = true,
+              swap_next = {
+                ["<leader>xn"] = "@parameter.inner",
+              },
+              swap_previous = {
+                ["<leader>xp"] = "@parameter.inner",
+              },
             },
           },
-          move = {
-            enable = true,
-            set_jumps = true,
-            goto_next_start = {
-              ["]]"] = "@function.outer",
-              ["]m"] = "@class.outer",
-            },
-            goto_next_end = {
-              ["]["] = "@function.outer",
-              ["]M"] = "@class.outer",
-            },
-            goto_previous_start = {
-              ["[["] = "@function.outer",
-              ["[m"] = "@class.outer",
-            },
-            goto_previous_end = {
-              ["[]"] = "@function.outer",
-              ["[M"] = "@class.outer",
-            },
-          },
-          swap = {
-            enable = true,
-            swap_next = {
-              ["<leader>xn"] = "@parameter.inner",
-            },
-            swap_previous = {
-              ["<leader>xp"] = "@parameter.inner",
-            },
-          },
-        },
-      })
+        })
+      else
+        local select = require("nvim-treesitter-textobjects.select")
+        local move = require("nvim-treesitter-textobjects.move")
+        local swap = require("nvim-treesitter-textobjects.swap")
+
+        local maps = {
+          af = "@function.outer",
+          ["if"] = "@function.inner",
+          ac = "@class.outer",
+          ic = "@class.inner",
+          aP = "@parameter.outer",
+          iP = "@parameter.inner",
+        }
+        for k, v in pairs(maps) do
+          vim.keymap.set({ "x", "o" }, k, function()
+            select.select_textobject(v, "textobjects")
+          end, { desc = "Select " .. v })
+        end
+
+        vim.keymap.set({ "n", "x", "o" }, "]]", function() move.goto_next_start("@function.outer", "textobjects") end, { desc = "Next function start" })
+        vim.keymap.set({ "n", "x", "o" }, "]m", function() move.goto_next_start("@class.outer", "textobjects") end, { desc = "Next class start" })
+        vim.keymap.set({ "n", "x", "o" }, "][", function() move.goto_next_end("@function.outer", "textobjects") end, { desc = "Next function end" })
+        vim.keymap.set({ "n", "x", "o" }, "]M", function() move.goto_next_end("@class.outer", "textobjects") end, { desc = "Next class end" })
+        vim.keymap.set({ "n", "x", "o" }, "[[", function() move.goto_previous_start("@function.outer", "textobjects") end, { desc = "Prev function start" })
+        vim.keymap.set({ "n", "x", "o" }, "[m", function() move.goto_previous_start("@class.outer", "textobjects") end, { desc = "Prev class start" })
+        vim.keymap.set({ "n", "x", "o" }, "[]", function() move.goto_previous_end("@function.outer", "textobjects") end, { desc = "Prev function end" })
+        vim.keymap.set({ "n", "x", "o" }, "[M", function() move.goto_previous_end("@class.outer", "textobjects") end, { desc = "Prev class end" })
+
+        vim.keymap.set("n", "<leader>xn", function() swap.swap_next("@parameter.inner", "textobjects") end, { desc = "Swap next parameter" })
+        vim.keymap.set("n", "<leader>xp", function() swap.swap_previous("@parameter.inner", "textobjects") end, { desc = "Swap prev parameter" })
+      end
     end,
   },
 
