@@ -20,7 +20,7 @@ map("n", "<C-Left>", "<cmd>vertical resize -2<CR>", { desc = "Decrease window wi
 map("n", "<C-Right>", "<cmd>vertical resize +2<CR>", { desc = "Increase window width" })
 
 -- Clear search highlight
-map("n", "<leader>h", "<cmd>nohlsearch<CR>", { desc = "Clear search highlight" })
+
 -- Double Esc to clear search highlight
 map("n", "<Esc><Esc>", "<cmd>nohlsearch<CR>", { desc = "Clear search highlight" })
 
@@ -73,4 +73,20 @@ map("n", "<C-n>", "<cmd>Neotree toggle<CR>", { desc = "Toggle Neo-tree" })
 
 -- Trouble (diagnostics panel)
 map("n", "<leader>xx", "<cmd>Trouble diagnostics toggle<CR>", { desc = "Diagnostics (Trouble)" })
+map("n", "<leader>xb", "<cmd>Trouble diagnostics toggle filter.buf=0<CR>", { desc = "Buffer Diagnostics (Trouble)" })
 map("n", "<leader>xq", "<cmd>Trouble qflist toggle<CR>", { desc = "Quickfix (Trouble)" })
+
+-- Harpoon (Fast file switching)
+map("n", "<leader>ha", function() require("harpoon"):list():add() end, { desc = "Harpoon Add File" })
+map("n", "<leader>hm", function() local harpoon = require("harpoon") harpoon.ui:toggle_quick_menu(harpoon:list()) end, { desc = "Harpoon Menu" })
+map("n", "<C-1>", function() require("harpoon"):list():select(1) end, { desc = "Harpoon 1" })
+map("n", "<C-2>", function() require("harpoon"):list():select(2) end, { desc = "Harpoon 2" })
+map("n", "<C-3>", function() require("harpoon"):list():select(3) end, { desc = "Harpoon 3" })
+map("n", "<C-4>", function() require("harpoon"):list():select(4) end, { desc = "Harpoon 4" })
+
+-- Aerial (Outline / Structure)
+map("n", "<leader>o", "<cmd>AerialToggle!<CR>", { desc = "Toggle Symbol Outline" })
+
+-- Session Management
+map("n", "<leader>qs", function() require("persistence").load() end, { desc = "Restore Session" })
+map("n", "<leader>ql", function() require("persistence").load({ last = true }) end, { desc = "Restore Last Session" })

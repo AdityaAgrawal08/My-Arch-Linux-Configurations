@@ -292,4 +292,19 @@ return {
       vim.g.vimtex_compiler_method = "latexmk"
     end,
   },
+
+  -- Session management
+  {
+    "folke/persistence.nvim",
+    event = "BufReadPre",
+    opts = { options = vim.opt.sessionoptions:get() },
+  },
+
+  -- Highlight TODO, FIXME, HACK, etc.
+  {
+    "folke/todo-comments.nvim",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    event = { "BufReadPost", "BufNewFile" },
+    opts = {},
+  },
 }

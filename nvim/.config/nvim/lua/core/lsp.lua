@@ -18,7 +18,8 @@ M.on_attach = function(client, bufnr)
     if ok then
       return ":IncRename " .. vim.fn.expand("<cword>")
     else
-      vim.lsp.buf.rename()
+      vim.schedule(function() vim.lsp.buf.rename() end)
+      return "<Ignore>"
     end
   end, { expr = true, buffer = bufnr, silent = true })
   map("n", "gI", vim.lsp.buf.implementation, opts)
