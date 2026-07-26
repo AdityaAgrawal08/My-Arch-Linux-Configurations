@@ -215,13 +215,30 @@ function M.auto_import_all_unresolved(bufnr)
 
   -- Limit to a sane maximum to prevent LSP congestion
   local limit = math.min(#unresolved, 8)
-
   local clients = vim.lsp.get_clients({ bufnr = bufnr })
   if #clients == 0 then return end
 
-  local completed_count = 0
-  local total_requests = 0
   local pending_edits = {}
+  local completed_requests = 0
+  local total_requests = 0
+
+  local function check_and_apply()
+    completed_requests = completed_requests + 1
+    if completed_requests == total_requests then
+      local applied = false
+      for _, edit in ipairs(pending_edits) do
+        apply_action(edit.action, edit.client_id)
+        applied = true
+      end
+      if applied then
+        -- Only write silently if we are in normal mode to avoid interrupting typing/visual selection
+        local mode = vim.api.nvim_get_mode().mode
+        if mode == "n" then
+          vim.cmd("silent! write")
+        end
+      end
+    end
+  end
 
   for i = 1, limit do
     local d = unresolved[i]
@@ -247,7 +264,6 @@ function M.auto_import_all_unresolved(bufnr)
       local c = client
       total_requests = total_requests + 1
       c:request("textDocument/codeAction", params, function(err, result)
-        completed_count = completed_count + 1
         if not err and result then
           local import_actions = {}
           for _, action in ipairs(result) do
@@ -259,18 +275,9 @@ function M.auto_import_all_unresolved(bufnr)
             table.insert(pending_edits, { action = import_actions[1], client_id = c.id })
           end
         end
+        check_and_apply()
       end, bufnr)
     end
-  end
-
-  -- Wait for up to 300ms for parallel requests to complete
-  vim.wait(300, function()
-    return completed_count >= total_requests
-  end, 20)
-
-  -- Apply unique edits
-  for _, edit in ipairs(pending_edits) do
-    apply_action(edit.action, edit.client_id)
   end
 end
 
@@ -474,7 +481,7 @@ function M.setup(opts)
   vim.api.nvim_create_autocmd("DiagnosticChanged", {
     group = group,
     callback = function(args)
-      if M.config.auto_import_on_diagnostics then
+      if M.config.auto_import_on_diagnostics or M.config.auto_import_while_typing then
         debounce_auto_import(args.buf)
       end
     end,
