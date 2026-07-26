@@ -1,7 +1,7 @@
 local map = vim.keymap.set
 
--- Select all
-map("n", "<C-a>", "ggVG", { desc = "Select all" })
+-- Select all (preserves native <C-a> for number increment)
+map("n", "<leader>a", "ggVG", { desc = "Select all" })
 
 -- Save & quit shortcuts
 map("n", "<leader>w", "<cmd>w<CR>", { desc = "Save file" })
@@ -44,7 +44,7 @@ map("n", "<leader>e", vim.diagnostic.open_float, { desc = "Show diagnostic float
 map("v", "<", "<gv", { desc = "Indent left" })
 map("v", ">", ">gv", { desc = "Indent right" })
 
--- Move lines up/down in visual mode
+-- Move lines up/down in visual mode (Note: Visual J overrides default line-join)
 map("v", "J", ":m '>+1<CR>gv=gv", { desc = "Move selection down", silent = true })
 map("v", "K", ":m '<-2<CR>gv=gv", { desc = "Move selection up", silent = true })
 

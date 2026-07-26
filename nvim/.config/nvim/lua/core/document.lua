@@ -158,17 +158,49 @@ end
 local function toggle_checkbox()
   local line = vim.api.nvim_get_current_line()
   if line:match("^%s*[%-%*]%s+%[%s+%]") then
-    line = line:gsub("^%s*([%-%*])%s+%[%s+%]", "%1 [x]", 1)
+    line = line:gsub("^(%s*)([%-%*])%s+%[%s+%]", "%1%2 [x]", 1)
   elseif line:match("^%s*[%-%*]%s+%[x%]") then
-    line = line:gsub("^%s*([%-%*])%s+%[x%]", "%1 [ ]", 1)
+    line = line:gsub("^(%s*)([%-%*])%s+%[x%]", "%1%2 [ ]", 1)
   else
     if line:match("^%s*[%-%*]%s+") then
-      line = line:gsub("^%s*([%-%*])%s+", "%1 [ ] ", 1)
+      line = line:gsub("^(%s*)([%-%*])%s+", "%1%2 [ ] ", 1)
     else
       line = line:gsub("^(%s*)", "%1- [ ] ", 1)
     end
   end
   vim.api.nvim_set_current_line(line)
+end
+
+local function toggle_code_block()
+  local mode = vim.fn.mode()
+  local start_line, end_line
+  if mode == "v" or mode == "V" or mode == "\22" then
+    vim.cmd("normal! \27")
+    local vstart = vim.fn.line("'<")
+    local vend = vim.fn.line("'>")
+    start_line = math.min(vstart, vend)
+    end_line = math.max(vstart, vend)
+  else
+    start_line = vim.fn.line(".")
+    end_line = start_line
+  end
+
+  local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+  if #lines == 0 then return end
+
+  -- Check if already wrapped with ``` above and below
+  local prev_line = start_line > 1 and vim.api.nvim_buf_get_lines(0, start_line - 2, start_line - 1, false)[1] or ""
+  local next_line = vim.api.nvim_buf_get_lines(0, end_line, end_line + 1, false)[1] or ""
+
+  if prev_line:match("^%s*```") and next_line:match("^%s*```") then
+    -- Remove the ``` lines
+    vim.api.nvim_buf_set_lines(0, end_line, end_line + 1, false, {})
+    vim.api.nvim_buf_set_lines(0, start_line - 2, start_line - 1, false, {})
+  else
+    -- Insert ``` above and below
+    vim.api.nvim_buf_set_lines(0, end_line, end_line, false, { "```" })
+    vim.api.nvim_buf_set_lines(0, start_line - 1, start_line - 1, false, { "```" })
+  end
 end
 
 -- Custom Markdown Toolbar Picker
@@ -194,7 +226,7 @@ local function apply_format(choice)
   elseif choice == "Heading 3" then
     prepend_lines("### ")
   elseif choice == "Code Block" then
-    toggle_wrap("```\n", "\n```")
+    toggle_code_block()
   elseif choice == "Horizontal Rule" then
     insert_at_cursor("\n---\n")
   elseif choice == "Link" then
@@ -225,6 +257,19 @@ end
 local focus_active = false
 local original_scrolloff = nil
 
+local function is_twilight_open()
+  local ok, twilight_view = pcall(require, "twilight.view")
+  if ok and type(twilight_view.is_open) == "function" then
+    local is_open_ok, result = pcall(twilight_view.is_open)
+    if is_open_ok then return result end
+  end
+  local ok_t, twilight = pcall(require, "twilight")
+  if ok_t and twilight.enabled ~= nil then
+    return twilight.enabled
+  end
+  return false
+end
+
 local function toggle_focus_mode()
   focus_active = not focus_active
   local has_zen, zen = pcall(require, "zen-mode")
@@ -241,7 +286,7 @@ local function toggle_focus_mode()
       if has_zen and not zen.active then
         vim.cmd("ZenMode")
       end
-      if has_twilight and not require("twilight.view").is_open() then
+      if has_twilight and not is_twilight_open() then
         vim.cmd("Twilight")
       end
     end)
@@ -256,7 +301,7 @@ local function toggle_focus_mode()
       if has_zen and zen.active then
         vim.cmd("ZenMode")
       end
-      if has_twilight and require("twilight.view").is_open() then
+      if has_twilight and is_twilight_open() then
         vim.cmd("Twilight")
       end
     end)
@@ -374,5 +419,8 @@ function M.setup(bufnr)
   vim.api.nvim_buf_create_user_command(bufnr, "ExportMenu", show_export_menu, {})
   vim.api.nvim_buf_create_user_command(bufnr, "FocusModeToggle", toggle_focus_mode, {})
 end
+
+M.toggle_checkbox = toggle_checkbox
+M.toggle_code_block = toggle_code_block
 
 return M

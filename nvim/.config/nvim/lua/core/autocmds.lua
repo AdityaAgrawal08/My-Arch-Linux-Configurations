@@ -26,7 +26,7 @@ vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
 -- Auto-resize splits when terminal window is resized
 vim.api.nvim_create_autocmd("VimResized", {
   callback = function()
-    vim.cmd("tabdo wincmd =")
+    pcall(vim.cmd, "tabdo wincmd =")
   end,
 })
 

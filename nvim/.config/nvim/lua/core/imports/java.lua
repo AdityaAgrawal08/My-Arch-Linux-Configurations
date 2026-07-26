@@ -19,8 +19,8 @@ function M.organize_imports(bufnr)
     done = true
   end)
 
-  -- Wait for up to 200ms synchronously
-  vim.wait(200, function() return done end, 10)
+  -- Wait for up to 1000ms synchronously
+  vim.wait(1000, function() return done end, 10)
   return success
 end
 

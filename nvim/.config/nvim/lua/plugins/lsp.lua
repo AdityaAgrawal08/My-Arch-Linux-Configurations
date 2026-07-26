@@ -272,10 +272,9 @@ return {
               },
             },
           },
-          root_dir = function(bufnr, callback)
+          root_dir = function(bufnr)
             local fname = vim.api.nvim_buf_get_name(bufnr)
             if fname == "" then
-              if callback then callback(nil) end
               return nil
             end
             local root_files = {
@@ -287,11 +286,7 @@ return {
               ".git",
             }
             local root = vim.fs.find(root_files, { path = fname, upward = true })[1]
-            local resolved = root and vim.fs.dirname(root) or vim.fs.dirname(fname)
-            if callback then
-              callback(resolved)
-            end
-            return resolved
+            return root and vim.fs.dirname(root) or vim.fs.dirname(fname)
           end,
         },
       }

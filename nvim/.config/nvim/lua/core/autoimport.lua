@@ -131,7 +131,7 @@ local function apply_action(action, client_id)
 end
 
 -- Telescope visual picker
-local function select_action_telescope(actions, client_id)
+local function select_action_telescope(actions)
   local pickers = require("telescope.pickers")
   local finders = require("telescope.finders")
   local conf = require("telescope.config").values
@@ -145,8 +145,8 @@ local function select_action_telescope(actions, client_id)
       entry_maker = function(entry)
         return {
           value = entry,
-          display = entry.title,
-          ordinal = entry.title,
+          display = entry.action.title,
+          ordinal = entry.action.title,
         }
       end,
     }),
@@ -156,7 +156,7 @@ local function select_action_telescope(actions, client_id)
         actions_ts.close(prompt_bufnr)
         local selection = action_state.get_selected_entry()
         if selection then
-          apply_action(selection.value, client_id)
+          apply_action(selection.value.action, selection.value.client_id)
         end
       end)
       return true
@@ -165,16 +165,16 @@ local function select_action_telescope(actions, client_id)
 end
 
 -- Standard UI selection fallback
-local function select_action_ui(actions, client_id)
+local function select_action_ui(actions)
   local choices = {}
   for _, entry in ipairs(actions) do
-    table.insert(choices, entry.title)
+    table.insert(choices, entry.action.title)
   end
   vim.ui.select(choices, {
     prompt = "Select Import:",
   }, function(choice, idx)
     if choice and idx then
-      apply_action(actions[idx], client_id)
+      apply_action(actions[idx].action, actions[idx].client_id)
     end
   end)
 end
@@ -201,7 +201,6 @@ function M.trigger_auto_import()
 
   local completed = 0
   local all_actions = {}
-  local active_client_id = nil
 
   for _, client in ipairs(clients) do
     local c = client
@@ -210,8 +209,7 @@ function M.trigger_auto_import()
       if not err and result then
         for _, action in ipairs(result) do
           if is_import_action(action, c.name) then
-            table.insert(all_actions, action)
-            active_client_id = c.id
+            table.insert(all_actions, { action = action, client_id = c.id })
           end
         end
       end
@@ -220,17 +218,17 @@ function M.trigger_auto_import()
         if #all_actions == 0 then
           vim.notify("AutoImport: No import candidates found.", vim.log.levels.INFO)
         elseif #all_actions == 1 then
-          apply_action(all_actions[1], active_client_id)
+          apply_action(all_actions[1].action, all_actions[1].client_id)
         else
           if M.config.ui.prefer_telescope then
             local has_telescope, _ = pcall(require, "telescope")
             if has_telescope then
-              local ok, err_pick = pcall(select_action_telescope, all_actions, active_client_id)
+              local ok, err_pick = pcall(select_action_telescope, all_actions)
               if ok then return end
               vim.notify("AutoImport: Telescope failed, falling back to UI select: " .. tostring(err_pick), vim.log.levels.WARN)
             end
           end
-          select_action_ui(all_actions, active_client_id)
+          select_action_ui(all_actions)
         end
       end
     end, bufnr)
