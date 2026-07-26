@@ -38,14 +38,7 @@ vim.api.nvim_create_autocmd("VimResized", {
   end,
 })
 
--- Filetype-specific indentation (4 spaces for these languages)
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = { "python", "java", "kotlin", "go", "c", "cpp" },
-  callback = function()
-    vim.opt_local.tabstop = 4
-    vim.opt_local.shiftwidth = 4
-  end,
-})
+
 
 -- Remove trailing whitespace on save (skip non-modifiable/special buffers)
 vim.api.nvim_create_autocmd("BufWritePre", {
