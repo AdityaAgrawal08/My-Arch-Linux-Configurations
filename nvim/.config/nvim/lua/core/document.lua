@@ -341,16 +341,20 @@ local function resize_image(args)
     resize_arg = arg
   end
   
+  local backup_path = abs_path .. ".bak"
+  vim.fn.system(string.format("cp %q %q", abs_path, backup_path))
   local cmd = string.format("mogrify -resize %s %q", resize_arg, abs_path)
   vim.fn.jobstart(cmd, {
     on_exit = function(_, exit_code)
       if exit_code == 0 then
+        vim.fn.delete(backup_path)
         vim.notify("Resized image to " .. arg, vim.log.levels.INFO)
         pcall(function()
           require("image").clear()
         end)
       else
-        vim.notify("Failed to resize image using mogrify.", vim.log.levels.ERROR)
+        vim.fn.system(string.format("mv %q %q", backup_path, abs_path))
+        vim.notify("Failed to resize image using mogrify. Restored original.", vim.log.levels.ERROR)
       end
     end
   })

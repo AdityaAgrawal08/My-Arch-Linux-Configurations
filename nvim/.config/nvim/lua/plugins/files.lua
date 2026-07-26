@@ -95,7 +95,10 @@ return {
         },
       })
       -- Load fzf extension for much faster fuzzy finding
-      pcall(telescope.load_extension, "fzf")
+      local ok, _ = pcall(telescope.load_extension, "fzf")
+      if not ok then
+        vim.notify("Telescope: fzf extension not found. Please run 'make' in the telescope-fzf-native directory.", vim.log.levels.WARN)
+      end
     end,
   },
 }

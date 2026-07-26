@@ -8,6 +8,14 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 -- Diagnostics configuration: no virtual_text, floating with border
 vim.diagnostic.config({
   virtual_text = false,
+  signs = {
+    text = {
+      [vim.diagnostic.severity.ERROR] = "󰅚",
+      [vim.diagnostic.severity.WARN] = "󰀦",
+      [vim.diagnostic.severity.HINT] = "󰌵",
+      [vim.diagnostic.severity.INFO] = "󰋼",
+    },
+  },
   float = {
     border = "rounded",
     source = "if_many",
@@ -17,7 +25,7 @@ vim.diagnostic.config({
 })
 
 -- Show diagnostics on hover (CursorHold)
-vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
+vim.api.nvim_create_autocmd({ "CursorHold" }, {
   callback = function()
     vim.diagnostic.open_float(nil, { focus = false })
   end,

@@ -166,7 +166,7 @@ return {
         },
         clangd = {
           cmd = {
-            "clangd",
+            vim.fn.exepath("clangd") ~= "" and vim.fn.exepath("clangd") or "clangd",
             "--background-index",
             "--clang-tidy",
             "--header-insertion=iwyu",
@@ -300,7 +300,10 @@ return {
       for _, server_name in ipairs(servers) do
         local config = vim.tbl_deep_extend("force", {}, default_config, server_settings[server_name] or {})
         vim.lsp.config(server_name, config)
-        vim.lsp.enable(server_name)
+        local ok, err = pcall(vim.lsp.enable, server_name)
+        if not ok then
+          vim.notify("Failed to enable LSP server " .. server_name .. ": " .. tostring(err), vim.log.levels.WARN)
+        end
       end
     end,
   },

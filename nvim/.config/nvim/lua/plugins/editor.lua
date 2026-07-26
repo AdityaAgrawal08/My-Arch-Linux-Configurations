@@ -23,6 +23,60 @@ return {
     end,
   },
 
+  -- Treesitter Textobjects
+  {
+    "nvim-treesitter/nvim-treesitter-textobjects",
+    event = { "BufReadPost", "BufNewFile" },
+    dependencies = { "nvim-treesitter/nvim-treesitter" },
+    config = function()
+      require("nvim-treesitter.configs").setup({
+        textobjects = {
+          select = {
+            enable = true,
+            lookahead = true,
+            keymaps = {
+              ["af"] = "@function.outer",
+              ["if"] = "@function.inner",
+              ["ac"] = "@class.outer",
+              ["ic"] = "@class.inner",
+              ["aP"] = "@parameter.outer",
+              ["iP"] = "@parameter.inner",
+            },
+          },
+          move = {
+            enable = true,
+            set_jumps = true,
+            goto_next_start = {
+              ["]]"] = "@function.outer",
+              ["]m"] = "@class.outer",
+            },
+            goto_next_end = {
+              ["]["] = "@function.outer",
+              ["]M"] = "@class.outer",
+            },
+            goto_previous_start = {
+              ["[["] = "@function.outer",
+              ["[m"] = "@class.outer",
+            },
+            goto_previous_end = {
+              ["[]"] = "@function.outer",
+              ["[M"] = "@class.outer",
+            },
+          },
+          swap = {
+            enable = true,
+            swap_next = {
+              ["<leader>xn"] = "@parameter.inner",
+            },
+            swap_previous = {
+              ["<leader>xp"] = "@parameter.inner",
+            },
+          },
+        },
+      })
+    end,
+  },
+
   -- Snippets
   {
     "L3MON4D3/LuaSnip",

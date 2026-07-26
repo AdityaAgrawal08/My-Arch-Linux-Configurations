@@ -12,8 +12,28 @@ M.on_attach = function(client, bufnr)
   map("n", "gd", vim.lsp.buf.definition, opts)
   map("n", "gr", vim.lsp.buf.references, opts)
   map("n", "K", vim.lsp.buf.hover, opts)
-  map("n", "<C-.>", vim.lsp.buf.code_action, opts)
-  map("n", "<leader>rn", vim.lsp.buf.rename, opts)
+  map("n", "<leader>ca", vim.lsp.buf.code_action, opts)
+  map("n", "<leader>rn", function()
+    local ok, _ = pcall(require, "inc_rename")
+    if ok then
+      return ":IncRename " .. vim.fn.expand("<cword>")
+    else
+      vim.lsp.buf.rename()
+    end
+  end, { expr = true, buffer = bufnr, silent = true })
+  map("n", "gI", vim.lsp.buf.implementation, opts)
+  map("n", "gy", vim.lsp.buf.type_definition, opts)
+  map("n", "<leader>li", vim.lsp.buf.incoming_calls, opts)
+  map("n", "<leader>lo", vim.lsp.buf.outgoing_calls, opts)
+  map("n", "<leader>lh", vim.lsp.buf.typehierarchy, opts)
+  map("n", "<leader>lf", vim.lsp.buf.format, opts)
+
+  if client.server_capabilities.inlayHintProvider then
+    vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
+  end
+  map("n", "<leader>th", function()
+    vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr }), { bufnr = bufnr })
+  end, opts)
 
   -- Auto Import keymaps
   map("n", "<M-CR>", "<cmd>AutoImport<CR>", opts)

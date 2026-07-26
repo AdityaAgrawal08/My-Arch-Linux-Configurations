@@ -65,9 +65,17 @@ return {
           bottom_search = true,
           command_palette = true,
           long_message_to_split = true,
-          inc_rename = false,
+          inc_rename = true,
         },
       })
+    end,
+  },
+
+  -- inc-rename
+  {
+    "smjonas/inc-rename.nvim",
+    config = function()
+      require("inc_rename").setup()
     end,
   },
 

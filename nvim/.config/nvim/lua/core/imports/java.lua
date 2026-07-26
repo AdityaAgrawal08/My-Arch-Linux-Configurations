@@ -14,14 +14,10 @@ function M.organize_imports(bufnr)
       vim.notify("AutoImport (Java): organizeImports failed: " .. tostring(err.message), vim.log.levels.ERROR)
     elseif result then
       vim.lsp.util.apply_workspace_edit(result, client.offset_encoding)
-      success = true
     end
-    done = true
   end)
 
-  -- Wait for up to 1000ms synchronously
-  vim.wait(1000, function() return done end, 10)
-  return success
+  return true
 end
 
 return M

@@ -74,7 +74,7 @@ local function is_import_action(action, client_name)
   local patterns = import_patterns[client_name]
   if patterns then
     for _, pattern in ipairs(patterns) do
-      if title:find(pattern) or lower_title:find(pattern:lower()) then
+      if title:find(pattern) or lower_title:find(pattern:lower(), 1, true) then
         return true
       end
     end
@@ -281,13 +281,11 @@ end
 -- Format and Organize Imports synchronously
 function M.format_and_organize()
   local bufnr = vim.api.nvim_get_current_buf()
-  if M.config.organize_imports_on_save then
-    M.run_organize_imports(bufnr)
-  end
+  M.run_organize_imports(bufnr)
 
   local ok, conform = pcall(require, "conform")
   if ok then
-    conform.format({ bufnr = bufnr, async = false })
+    conform.format({ bufnr = bufnr, async = false, lsp_fallback = true })
   else
     vim.lsp.buf.format({ bufnr = bufnr, async = false })
   end

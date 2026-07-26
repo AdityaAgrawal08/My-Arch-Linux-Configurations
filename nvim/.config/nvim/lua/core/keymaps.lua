@@ -51,9 +51,22 @@ map("v", "K", ":m '<-2<CR>gv=gv", { desc = "Move selection up", silent = true })
 -- Telescope (plugin will be lazy-loaded on use)
 map("n", "<C-p>", "<cmd>Telescope find_files<CR>", { desc = "Find files" })
 map("n", "<leader>fg", "<cmd>Telescope live_grep<CR>", { desc = "Grep" })
+map("n", "<leader>fw", "<cmd>Telescope grep_string<CR>", { desc = "Grep string under cursor" })
 map("n", "<leader>fb", "<cmd>Telescope buffers<CR>", { desc = "Buffers" })
 map("n", "<leader>fh", "<cmd>Telescope help_tags<CR>", { desc = "Help tags" })
 map("n", "<leader>fr", "<cmd>Telescope oldfiles<CR>", { desc = "Recent files" })
+
+-- Telescope LSP / Search
+map("n", "<leader>sw", "<cmd>Telescope lsp_dynamic_workspace_symbols<CR>", { desc = "Workspace symbols" })
+map("n", "<leader>sd", "<cmd>Telescope lsp_document_symbols<CR>", { desc = "Document symbols" })
+map("n", "<leader>sr", "<cmd>Telescope lsp_references<CR>", { desc = "References" })
+map("n", "<leader>sD", "<cmd>Telescope diagnostics<CR>", { desc = "Workspace diagnostics" })
+map("n", "<leader>sc", "<cmd>Telescope commands<CR>", { desc = "Commands" })
+map("n", "<leader>sk", "<cmd>Telescope keymaps<CR>", { desc = "Keymaps" })
+
+-- Git
+map("n", "<leader>gs", "<cmd>Telescope git_status<CR>", { desc = "Git status" })
+map("n", "<leader>gc", "<cmd>Telescope git_commits<CR>", { desc = "Git commits" })
 
 -- Neo-tree toggle
 map("n", "<C-n>", "<cmd>Neotree toggle<CR>", { desc = "Toggle Neo-tree" })

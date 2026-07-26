@@ -17,7 +17,6 @@ vim.opt.relativenumber = true
 vim.opt.mouse = "a"
 vim.opt.autoread = true
 vim.opt.termguicolors = true
-vim.o.background = "dark"
 vim.opt.signcolumn = "yes" -- prevent layout shift from diagnostics
 vim.opt.cursorline = true -- highlight current line
 vim.opt.wrap = false -- don't wrap long lines in code
