@@ -3,6 +3,7 @@ local M = {}
 -- Default options
 M.config = {
   organize_imports_on_save = true,
+  auto_import_on_save = true,
   ui = {
     prefer_telescope = true,
   },
@@ -179,6 +180,99 @@ local function select_action_ui(actions)
   end)
 end
 
+-- Resolve all unique unresolved diagnostics in a buffer
+local function is_unresolved_diagnostic(d)
+  if not d or not d.message then return false end
+  local msg = d.message:lower()
+  return msg:find("undeclared")
+      or msg:find("not found")
+      or msg:find("unresolved")
+      or msg:find("undefined")
+      or msg:find("cannot find")
+      or msg:find("could not find")
+      or msg:find("not declared")
+      or msg:find("unknown")
+      or msg:find("import")
+      or msg:find("include")
+end
+
+function M.auto_import_all_unresolved(bufnr)
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
+  if not vim.api.nvim_buf_is_valid(bufnr) or not vim.bo[bufnr].modifiable or vim.bo[bufnr].buftype ~= "" then
+    return
+  end
+
+  local diagnostics = vim.diagnostic.get(bufnr)
+  local unresolved = {}
+  for _, d in ipairs(diagnostics) do
+    if is_unresolved_diagnostic(d) then
+      table.insert(unresolved, d)
+    end
+  end
+
+  if #unresolved == 0 then return end
+
+  -- Limit to a sane maximum to prevent LSP congestion
+  local limit = math.min(#unresolved, 8)
+
+  local clients = vim.lsp.get_clients({ bufnr = bufnr })
+  if #clients == 0 then return end
+
+  local completed_count = 0
+  local total_requests = 0
+  local pending_edits = {}
+
+  for i = 1, limit do
+    local d = unresolved[i]
+    local params = vim.lsp.util.make_range_params()
+    params.range = {
+      start = { line = d.lnum, character = d.col },
+      ["end"] = { line = d.end_lnum or d.lnum, character = d.end_col or d.col },
+    }
+    params.context = {
+      diagnostics = {
+        {
+          range = params.range,
+          severity = d.severity,
+          code = d.code,
+          source = d.source,
+          message = d.message,
+        }
+      },
+      triggerKind = vim.lsp.protocol.CodeActionTriggerKind.Invoked,
+    }
+
+    for _, client in ipairs(clients) do
+      local c = client
+      total_requests = total_requests + 1
+      c:request("textDocument/codeAction", params, function(err, result)
+        completed_count = completed_count + 1
+        if not err and result then
+          local import_actions = {}
+          for _, action in ipairs(result) do
+            if is_import_action(action, c.name) then
+              table.insert(import_actions, action)
+            end
+          end
+          if #import_actions == 1 then
+            table.insert(pending_edits, { action = import_actions[1], client_id = c.id })
+          end
+        end
+      end, bufnr)
+    end
+  end
+
+  -- Wait for up to 300ms for parallel requests to complete
+  vim.wait(300, function()
+    return completed_count >= total_requests
+  end, 20)
+
+  -- Apply unique edits
+  for _, edit in ipairs(pending_edits) do
+    apply_action(edit.action, edit.client_id)
+  end
+end
+
 -- Trigger manual import asynchronously via native codeActions
 function M.trigger_auto_import()
   local bufnr = vim.api.nvim_get_current_buf()
@@ -195,7 +289,51 @@ function M.trigger_auto_import()
   end
 
   local params = vim.lsp.util.make_range_params()
+  
+  -- Get diagnostics under the cursor
+  local line, col = unpack(vim.api.nvim_win_get_cursor(0))
+  line = line - 1 -- 0-indexed
+  local diagnostics = vim.diagnostic.get(bufnr, { lnum = line })
+  local lsp_diagnostics = {}
+  for _, d in ipairs(diagnostics) do
+    if col >= d.col and col <= (d.end_col or d.col) then
+      table.insert(lsp_diagnostics, {
+        range = {
+          start = { line = d.lnum, character = d.col },
+          ["end"] = { line = d.end_lnum or d.lnum, character = d.end_col or d.col },
+        },
+        severity = d.severity,
+        code = d.code,
+        source = d.source,
+        message = d.message,
+      })
+    end
+  end
+
+  -- Fallback to all diagnostics on current line if no diagnostic is directly under cursor
+  if #lsp_diagnostics == 0 then
+    for _, d in ipairs(diagnostics) do
+      table.insert(lsp_diagnostics, {
+        range = {
+          start = { line = d.lnum, character = d.col },
+          ["end"] = { line = d.end_lnum or d.lnum, character = d.end_col or d.col },
+        },
+        severity = d.severity,
+        code = d.code,
+        source = d.source,
+        message = d.message,
+      })
+    end
+  end
+
+  -- If still no diagnostics on the line, scan the entire buffer for unresolved imports
+  if #lsp_diagnostics == 0 then
+    M.auto_import_all_unresolved(bufnr)
+    return
+  end
+
   params.context = {
+    diagnostics = lsp_diagnostics,
     triggerKind = vim.lsp.protocol.CodeActionTriggerKind.Invoked,
   }
 
@@ -282,6 +420,7 @@ end
 function M.format_and_organize()
   local bufnr = vim.api.nvim_get_current_buf()
   M.run_organize_imports(bufnr)
+  M.auto_import_all_unresolved(bufnr)
 
   local ok, conform = pcall(require, "conform")
   if ok then
@@ -297,7 +436,7 @@ function M.setup(opts)
 
   local group = vim.api.nvim_create_augroup("AutoImportGroup", { clear = true })
 
-  -- Organize imports asynchronously or with short timeout on BufWritePre
+  -- Organize and auto-import on BufWritePre
   vim.api.nvim_create_autocmd("BufWritePre", {
     group = group,
     pattern = "*",
@@ -307,6 +446,9 @@ function M.setup(opts)
       end
       if M.config.organize_imports_on_save then
         M.run_organize_imports(args.buf)
+      end
+      if M.config.auto_import_on_save then
+        M.auto_import_all_unresolved(args.buf)
       end
     end,
   })

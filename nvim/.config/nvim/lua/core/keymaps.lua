@@ -65,8 +65,18 @@ map("n", "<leader>sc", "<cmd>Telescope commands<CR>", { desc = "Commands" })
 map("n", "<leader>sk", "<cmd>Telescope keymaps<CR>", { desc = "Keymaps" })
 
 -- Git
-map("n", "<leader>gs", "<cmd>Telescope git_status<CR>", { desc = "Git status" })
-map("n", "<leader>gc", "<cmd>Telescope git_commits<CR>", { desc = "Git commits" })
+local function git_telescope(cmd, desc)
+  return function()
+    local is_git = vim.fn.system("git rev-parse --is-inside-work-tree"):match("true")
+    if is_git then
+      vim.cmd("Telescope " .. cmd)
+    else
+      vim.notify("Not a git repository", vim.log.levels.WARN, { title = desc })
+    end
+  end
+end
+map("n", "<leader>gs", git_telescope("git_status", "Git Status"), { desc = "Git status" })
+map("n", "<leader>gc", git_telescope("git_commits", "Git Commits"), { desc = "Git commits" })
 
 -- Neo-tree toggle
 map("n", "<C-n>", "<cmd>Neotree toggle<CR>", { desc = "Toggle Neo-tree" })
