@@ -1,12 +1,3 @@
--- Compatibility shim: Neovim 0.11 removed ft_to_lang (Telescope still uses it in previewers)
-if not vim.treesitter.language.ft_to_lang then
-  vim.treesitter.language.ft_to_lang = setmetatable({}, {
-    __index = function(_, key)
-      return vim.treesitter.language.get_lang(key) or key
-    end
-  })
-end
-
 -- Leader keys
 vim.g.mapleader = " "
 vim.g.maplocalleader = "\\"
