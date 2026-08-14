@@ -33,7 +33,7 @@ fi
 
 # Bypass confirmation for utility/overlay windows
 if [[ "$WINDOW_CLASS" =~ ^(wofi|system-dashboard|com\.system\.dashboard)$ ]]; then
-    hyprctl dispatch closewindow address:"$WINDOW_ADDRESS"
+    hyprctl dispatch "hl.dsp.window.close({ window = \"address:$WINDOW_ADDRESS\" })"
     exit 0
 fi
 
@@ -65,5 +65,5 @@ CHOICE=$(printf "NO\nYES" | wofi --dmenu \
 
 # If choice is yes, close the window by its address
 if [ "$CHOICE" = "YES" ]; then
-    hyprctl dispatch closewindow address:"$WINDOW_ADDRESS"
+    hyprctl dispatch "hl.dsp.window.close({ window = \"address:$WINDOW_ADDRESS\" })"
 fi

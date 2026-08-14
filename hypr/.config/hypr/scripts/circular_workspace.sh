@@ -40,5 +40,5 @@ if [ -z "$next" ]; then
 fi
 
 # Switch workspace silently
-hypr dispatch workspace "$next"
+hypr dispatch "hl.dsp.focus({ workspace = \"$next\" })"
 

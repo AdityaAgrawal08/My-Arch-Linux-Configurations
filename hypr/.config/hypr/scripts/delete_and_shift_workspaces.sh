@@ -23,6 +23,7 @@ fi
 # Build mapping: old_id -> new_id (1..N)
 declare -A new_for_old
 new_id=1
+
 for old_id in "${ws_ids[@]}"; do
     new_for_old["$old_id"]=$new_id
     new_id=$((new_id + 1))
@@ -33,18 +34,22 @@ clients_json=$(hyprctl clients -j)
 
 # Each line: ADDRESS<TAB>WORKSPACE_ID
 while IFS=$'\t' read -r addr wsid; do
-    # If for some reason wsid not in mapping, leave it
+    # If for some reason wsid is not in mapping, leave it
     target="${new_for_old["$wsid"]:-$wsid}"
 
     if [ "$target" != "$wsid" ]; then
-        hyprctl dispatch movetoworkspacesilent "$target",address:"$addr" 2>/dev/null || true
+        hyprctl dispatch \
+            "hl.dsp.window.move({ workspace = \"$target\", window = \"address:$addr\" })" \
+            2>/dev/null || true
     fi
 done < <(echo "$clients_json" | jq -r '.[] | "\(.address)\t\(.workspace.id)"')
 
 # Refocus to the "same" logical workspace as before, if possible
 new_current="${new_for_old["$current_ws_id"]:-$current_ws_id}"
-hyprctl dispatch workspace "$new_current" 2>/dev/null || true
+
+hyprctl dispatch \
+    "hl.dsp.focus({ workspace = \"$new_current\" })" \
+    2>/dev/null || true
 
 # Refresh Waybar workspaces (if Waybar is running)
 pkill -SIGUSR1 waybar 2>/dev/null || true
-
