@@ -41,16 +41,7 @@ fi
 DISPLAY_NAME=$(echo "$WINDOW_CLASS" | tr '[:lower:]' '[:upper:]')
 
 # Build prompt and pad it to center horizontally (approx 34 chars fit in width 350)
-PROMPT_TEXT="CLOSE $DISPLAY_NAME"
-TOTAL_WIDTH=34
-TEXT_LEN=${#PROMPT_TEXT}
-PADDING_LEN=$(( (TOTAL_WIDTH - TEXT_LEN) / 2 ))
-if [ $PADDING_LEN -gt 0 ]; then
-    PADDING=$(printf '%*s' "$PADDING_LEN" "")
-    PROMPT="${PADDING}${PROMPT_TEXT}"
-else
-    PROMPT="$PROMPT_TEXT"
-fi
+PROMPT="Close $DISPLAY_NAME?"
 
 # Show wofi confirmation dialog
 CHOICE=$(printf "NO\nYES" | wofi --dmenu \
@@ -59,6 +50,8 @@ CHOICE=$(printf "NO\nYES" | wofi --dmenu \
     --height 105 \
     --columns 2 \
     -k /dev/null \
+    -n \
+    -D use_search_box=false \
     -D content_halign=center \
     -D single_click=true \
     -s ~/.config/wofi/confirm.css)

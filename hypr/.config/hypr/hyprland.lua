@@ -62,10 +62,10 @@ hl.config({
     gaps_out                = 1,
     border_size             = 1,
 
-    ["col.active_border"]   = "rgba(a7c080ee)",
-    ["col.inactive_border"] = "rgba(3d484daa)",
+    ["col.active_border"]   = "rgba(020202ff)",
+    ["col.inactive_border"] = "rgba(010101ff)",
 
-    resize_on_border        = false,
+    resize_on_border        = true,
     allow_tearing           = false,
     layout                  = "dwindle",
   },

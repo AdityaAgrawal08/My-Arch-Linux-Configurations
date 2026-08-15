@@ -29,8 +29,7 @@ symbol = " "
 style = "bold yellow"
 
 [git_status]
-style = "yellow"
-format = "($all_status) "
+disabled = true
 
 # PYTHON
 [python]

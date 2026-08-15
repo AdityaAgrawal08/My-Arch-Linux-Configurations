@@ -9,7 +9,8 @@
     "custom/media"
   ],
   "modules-center": [
-    "sway/window"
+    "clock",
+    "battery"
   ],
   "modules-right": [
     "mpd",
@@ -91,8 +92,8 @@
     "spacing": 10
   },
   "clock": {
-    "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
-    "format-alt": "{:%d-%m-%Y}"
+    "format": "{:%H:%M  |  %d-%m-%Y}",
+    "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
   },
   "cpu": {
     "format": "{usage}% ",
