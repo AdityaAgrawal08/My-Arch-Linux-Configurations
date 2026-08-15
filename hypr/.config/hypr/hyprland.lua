@@ -22,8 +22,8 @@ hl.monitor({
 -- ENVIRONMENT ---
 ------------------
 
-hl.env("XCURSOR_SIZE", "24")
-hl.env("HYPRCURSOR_SIZE", "24")
+hl.env("XCURSOR_SIZE", "21")
+hl.env("HYPRCURSOR_SIZE", "21")
 hl.env("QT_QPA_PLATFORMTHEME", "gtk3")
 
 hl.env("GDK_SCALE", "2")
