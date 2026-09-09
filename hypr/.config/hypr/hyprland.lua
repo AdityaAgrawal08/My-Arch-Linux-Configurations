@@ -228,6 +228,14 @@ hl.bind(mainMod .. " + SHIFT + 8", hl.dsp.window.move({ workspace = 8 }))
 hl.bind(mainMod .. " + SHIFT + 9", hl.dsp.window.move({ workspace = 9 }))
 hl.bind(mainMod .. " + SHIFT + 0", hl.dsp.window.move({ workspace = 10 }))
 
+-- Focus movement
+hl.bind(mainMod .. " + up", hl.dsp.focus({ direction = "u" }))
+hl.bind(mainMod .. " + down", hl.dsp.focus({ direction = "d" }))
+
+-- Workspace navigation
+hl.bind(mainMod .. " + left", hl.dsp.focus({ workspace = "e-1" }))
+hl.bind(mainMod .. " + right", hl.dsp.focus({ workspace = "e+1" }))
+
 -- Workspace cycling scripts
 hl.bind("SUPER + TAB", hl.dsp.exec_cmd("~/.config/hypr/scripts/increase_workspace.sh"))
 hl.bind("SUPER + D", hl.dsp.exec_cmd("~/.config/hypr/scripts/delete_and_shift_workspaces.sh"))

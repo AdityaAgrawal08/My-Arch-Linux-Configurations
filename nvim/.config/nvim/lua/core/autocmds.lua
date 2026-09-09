@@ -1,11 +1,20 @@
+local augroup = vim.api.nvim_create_augroup("UserAutocmds", {
+  clear = true,
+})
+
 -- Highlight on yank
 vim.api.nvim_create_autocmd("TextYankPost", {
+  group = augroup,
+  desc = "Highlight yanked text",
   callback = function()
-    vim.hl.on_yank({ higroup = "Visual", timeout = 120 })
+    vim.hl.on_yank({
+      higroup = "Visual",
+      timeout = 120,
+    })
   end,
 })
 
--- Diagnostics configuration: no virtual_text, floating with border
+-- Diagnostics configuration
 vim.diagnostic.config({
   virtual_text = false,
   signs = {
@@ -24,125 +33,170 @@ vim.diagnostic.config({
   severity_sort = true,
 })
 
--- Show diagnostics on hover (CursorHold)
-vim.api.nvim_create_autocmd({ "CursorHold" }, {
+-- Show diagnostics on hover
+vim.api.nvim_create_autocmd("CursorHold", {
+  group = augroup,
+  desc = "Show diagnostics under cursor",
   callback = function()
-    vim.diagnostic.open_float(nil, { focus = false })
+    vim.diagnostic.open_float(nil, {
+      focus = false,
+    })
   end,
 })
 
 -- Auto-resize splits when terminal window is resized
 vim.api.nvim_create_autocmd("VimResized", {
+  group = augroup,
+  desc = "Equalize windows after resize",
   callback = function()
-    pcall(vim.cmd, "tabdo wincmd =")
+    pcall(function()
+      vim.cmd("tabdo wincmd =")
+    end)
   end,
 })
 
-
-
--- Remove trailing whitespace on save (skip non-modifiable/special buffers)
-vim.api.nvim_create_autocmd("BufWritePre", {
-  pattern = "*",
-  callback = function(args)
-    if not vim.bo[args.buf].modifiable or vim.bo[args.buf].buftype ~= "" then
-      return
-    end
-    local save_cursor = vim.fn.getpos(".")
-    vim.cmd([[%s/\s\+$//e]])
-    vim.fn.setpos(".", save_cursor)
-  end,
-})
+-- NOTE:
+-- The old BufWritePre trailing-whitespace hook was intentionally removed.
+--
+-- It was:
+--
+-- vim.api.nvim_create_autocmd("BufWritePre", {
+--   ...
+--   vim.cmd([[%s/\s\+$//e]])
+-- })
+--
+-- This prevents this file from modifying buffers during :write.
 
 -- Return to last edit position when opening files
 vim.api.nvim_create_autocmd("BufReadPost", {
+  group = augroup,
+  desc = "Restore last cursor position",
   callback = function(args)
     local mark = vim.api.nvim_buf_get_mark(args.buf, '"')
-    local lcount = vim.api.nvim_buf_line_count(args.buf)
-    if mark[1] > 0 and mark[1] <= lcount then
-      local win = vim.fn.bufwinid(args.buf)
-      if win ~= -1 then
-        pcall(vim.api.nvim_win_set_cursor, win, mark)
-      end
+    local line_count = vim.api.nvim_buf_line_count(args.buf)
+
+    if mark[1] <= 0 or mark[1] > line_count then
+      return
+    end
+
+    local win = vim.fn.bufwinid(args.buf)
+
+    if win ~= -1 then
+      pcall(vim.api.nvim_win_set_cursor, win, mark)
     end
   end,
 })
 
 -- Markdown and text document configuration
 vim.api.nvim_create_autocmd("FileType", {
-  pattern = { "markdown", "text" },
+  group = augroup,
+  pattern = {
+    "markdown",
+    "text",
+  },
+  desc = "Configure text documents",
   callback = function(event)
     require("core.document").setup(event.buf)
   end,
 })
 
--- Automatically populate Java package and class template for new files
+-- Automatically populate Java package and class template
+-- for new Java files
 vim.api.nvim_create_autocmd("BufNewFile", {
+  group = augroup,
   pattern = "*.java",
+  desc = "Create Java class template",
   callback = function(args)
     local filepath = vim.api.nvim_buf_get_name(args.buf)
-    if filepath == "" then return end
 
-    -- Normalize slashes
+    if filepath == "" then
+      return
+    end
+
+    -- Normalize path separators
     filepath = filepath:gsub("\\", "/")
 
-    -- 1. Find the project root
-    local root_files = { ".git", "pom.xml", "build.gradle", "settings.gradle", ".project" }
-    local root_match = vim.fs.find(root_files, { path = filepath, upward = true })[1]
-    local project_root = root_match and vim.fs.dirname(root_match) or nil
+    -- Find project root
+    local root_files = {
+      ".git",
+      "pom.xml",
+      "build.gradle",
+      "settings.gradle",
+      ".project",
+    }
 
+    local root_match = vim.fs.find(root_files, {
+      path = filepath,
+      upward = true,
+    })[1]
+
+    local project_root = root_match and vim.fs.dirname(root_match) or nil
     local package_path = ""
 
     if project_root then
-      -- Normalize project root slashes
       project_root = project_root:gsub("\\", "/")
+
       local dirpath = vim.fn.fnamemodify(filepath, ":h")
-      
-      -- If the file is inside the project root, extract the relative path
-      if dirpath:sub(1, #project_root) == project_root then
-        local rel_dir = dirpath:sub(#project_root + 2) -- +2 to skip separator
-        
-        -- Strip standard Java source directory prefixes
+
+      -- Ensure the file is actually below the project root.
+      if dirpath == project_root then
+        package_path = ""
+      elseif vim.startswith(dirpath, project_root .. "/") then
+        local rel_dir = dirpath:sub(#project_root + 2)
+
+        -- Strip standard Java source prefixes.
         local prefixes = {
           "src/main/java/",
           "src/test/java/",
           "src/",
           "lib/",
         }
+
         package_path = rel_dir
+
         for _, prefix in ipairs(prefixes) do
-          if rel_dir:sub(1, #prefix) == prefix then
+          if vim.startswith(rel_dir, prefix) then
             package_path = rel_dir:sub(#prefix + 1)
             break
           end
         end
       end
     else
-      -- Fallback to standard segment match if no root marker is found
+      -- Fallback when no project root can be found.
       local patterns = {
         "/src/main/java/",
         "/src/test/java/",
         "/src/",
       }
+
       for _, pattern in ipairs(patterns) do
-        local start_idx, end_idx = filepath:find(pattern, 1, true)
-        if start_idx then
+        local _, end_idx = filepath:find(pattern, 1, true)
+
+        if end_idx then
           local remaining = filepath:sub(end_idx + 1)
           local last_slash = remaining:find("/[^/]*$")
+
           if last_slash then
             package_path = remaining:sub(1, last_slash - 1)
           end
+
           break
         end
       end
     end
 
-    -- Extract class/filename
+    -- Extract class name from filename.
     local filename = vim.fn.fnamemodify(filepath, ":t:r")
-    if filename == "" then return end
+
+    if filename == "" then
+      return
+    end
 
     local lines = {}
-    if package_path and package_path ~= "" then
+
+    if package_path ~= "" then
       local package_name = package_path:gsub("/", ".")
+
       table.insert(lines, "package " .. package_name .. ";")
       table.insert(lines, "")
     end
@@ -151,10 +205,21 @@ vim.api.nvim_create_autocmd("BufNewFile", {
     table.insert(lines, "    ")
     table.insert(lines, "}")
 
-    vim.api.nvim_buf_set_lines(args.buf, 0, -1, false, lines)
+    vim.api.nvim_buf_set_lines(
+      args.buf,
+      0,
+      -1,
+      false,
+      lines
+    )
 
-    -- Move cursor inside class body
-    local cursor_line = (package_path and package_path ~= "") and 4 or 2
-    pcall(vim.api.nvim_win_set_cursor, 0, { cursor_line, 4 })
+    -- Put cursor inside class body.
+    local cursor_line = package_path ~= "" and 4 or 2
+
+    pcall(
+      vim.api.nvim_win_set_cursor,
+      0,
+      { cursor_line, 4 }
+    )
   end,
 })
