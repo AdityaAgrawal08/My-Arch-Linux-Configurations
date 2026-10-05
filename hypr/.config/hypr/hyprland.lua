@@ -26,7 +26,8 @@ hl.env("XCURSOR_SIZE", "21")
 hl.env("HYPRCURSOR_SIZE", "21")
 hl.env("QT_QPA_PLATFORMTHEME", "gtk3")
 
-hl.env("192", "QT_WAYLAND_FORCE_DPI")
+hl.env("GDK_SCALE", "2")
+hl.env("QT_WAYLAND_FORCE_DPI", "192")
 hl.env("_JAVA_OPTIONS", "-Dsun.java2d.uiScale=2 -Dawt.useSystemAAFontSettings=on -Dswing.aatext=true")
 hl.env("ELECTRON_USE_WAYLAND", "1")
 hl.env("GDK_BACKEND", "wayland")
@@ -61,9 +62,10 @@ hl.config({
     gaps_out                = 1,
     border_size             = 1,
 
-    ["col.active_border"]   = "rgba(020202ff)",
+    -- Focused window gets a blue outer edge; inactive stays near-black so
+    -- focus is obvious at a glance.
+    ["col.active_border"]   = "rgba(4b9fe8ff)",
     ["col.inactive_border"] = "rgba(010101ff)",
-
     resize_on_border        = true,
     allow_tearing           = false,
     layout                  = "dwindle",
@@ -114,7 +116,7 @@ hl.config({
     kb_model     = "",
     kb_options   = "",
     kb_rules     = "",
-    follow_mouse = 1,
+    follow_mouse = 0,
     sensitivity  = 0,
 
     touchpad     = {
@@ -204,6 +206,12 @@ hl.bind(mainMod .. " + right", hl.dsp.focus({ direction = "r" }))
 hl.bind(mainMod .. " + up", hl.dsp.focus({ direction = "u" }))
 hl.bind(mainMod .. " + down", hl.dsp.focus({ direction = "d" }))
 
+-- Workspace navigation (SUPER + SHIFT + arrow = previous / next workspace)
+hl.bind(mainMod .. " + SHIFT + left", hl.dsp.focus({ workspace = "e-1" }))
+hl.bind(mainMod .. " + SHIFT + right", hl.dsp.focus({ workspace = "e+1" }))
+hl.bind(mainMod .. " + SHIFT + up", hl.dsp.focus({ workspace = "e-1" }))
+hl.bind(mainMod .. " + SHIFT + down", hl.dsp.focus({ workspace = "e+1" }))
+
 -- Workspaces (focus)
 hl.bind(mainMod .. " + 1", hl.dsp.focus({ workspace = 1 }))
 hl.bind(mainMod .. " + 2", hl.dsp.focus({ workspace = 2 }))
@@ -227,14 +235,6 @@ hl.bind(mainMod .. " + SHIFT + 7", hl.dsp.window.move({ workspace = 7 }))
 hl.bind(mainMod .. " + SHIFT + 8", hl.dsp.window.move({ workspace = 8 }))
 hl.bind(mainMod .. " + SHIFT + 9", hl.dsp.window.move({ workspace = 9 }))
 hl.bind(mainMod .. " + SHIFT + 0", hl.dsp.window.move({ workspace = 10 }))
-
--- Focus movement
-hl.bind(mainMod .. " + up", hl.dsp.focus({ direction = "u" }))
-hl.bind(mainMod .. " + down", hl.dsp.focus({ direction = "d" }))
-
--- Workspace navigation
-hl.bind(mainMod .. " + left", hl.dsp.focus({ workspace = "e-1" }))
-hl.bind(mainMod .. " + right", hl.dsp.focus({ workspace = "e+1" }))
 
 -- Workspace cycling scripts
 hl.bind("SUPER + TAB", hl.dsp.exec_cmd("~/.config/hypr/scripts/increase_workspace.sh"))
@@ -281,6 +281,15 @@ hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"), { locked = true 
 ----------------------------
 -- WINDOW RULES ------------
 ----------------------------
+
+-- Ignore maximize requests from all apps, so no window can ever open
+-- maximized/fullscreen-sized over the others.
+hl.window_rule({
+  name           = "suppress-maximize",
+  match          = { class = ".*" },
+
+  suppress_event = "maximize",
+})
 
 hl.window_rule({
   name        = "apply-something",
