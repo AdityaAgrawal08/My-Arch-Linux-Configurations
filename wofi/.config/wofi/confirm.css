@@ -1,3 +1,5 @@
+/* Confirm dialog — deep everforest base, red NO / sage-green YES */
+
 * {
   font-family: "Adwaita Sans", "Noto Sans", sans-serif;
   font-size: 12px;
@@ -5,9 +7,9 @@
 }
 
 window {
-  border: 1px solid #292929;
-  border-radius: 10px;
-  background-color: #101010;
+  border: 1px solid #3d484d;
+  border-radius: 12px;
+  background-color: #262d33;
 }
 
 #outer-box {
@@ -16,46 +18,74 @@ window {
   background-color: transparent;
 }
 
-/* Confirmation title */
+/* Question chip */
 
 #input {
-  margin: 6px 10px 14px 10px;
-  padding: 0;
+  margin: 6px 6px 14px 6px;
+  padding: 8px 10px;
   border: none;
-  background: transparent;
+  border-radius: 8px;
+  background-color: #323c41;
   box-shadow: none;
   outline: none;
-  color: #d3c6aa;
+  color: #ffffff;
   font-size: 13px;
   font-weight: 600;
   caret-color: transparent;
 }
 
-/* Buttons */
+/* Buttons — base */
 
 #entry {
   margin: 4px;
   padding: 9px 20px;
-  border: 1px solid #292929;
+  border: 1px solid #3d484d;
   border-radius: 7px;
-  background-color: #181818;
+  background-color: #323c41;
 }
 
 #text {
   font-size: 12px;
-  font-weight: 500;
-  color: #858585;
+  font-weight: 600;
+  color: #d3c6aa;
 }
 
-/* Selected */
+/* NO — red background, white text */
+
+#entry:first-child {
+  background-color: #e64545;
+  border-color: #e64545;
+}
+
+#entry:first-child #text {
+  color: #ffffff;
+}
+
+/* YES — everforest sage */
+
+#entry:last-child {
+  background-color: #a7c080;
+  border-color: #a7c080;
+}
+
+#entry:last-child #text {
+  color: #21282b;
+}
+
+/* Selected / focused button — white ring, labels keep their colour */
 
 #entry:selected {
-  background-color: #252525;
-  border: 1px solid #3a3a3a;
+  box-shadow: 0 0 0 2px #ffffff;
 }
 
-#entry:selected #text {
-  color: #d3c6aa;
+#entry:first-child:selected #text {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+#entry:last-child:selected #text {
+  color: #21282b;
+  font-weight: 700;
 }
 
 /* Scrollbar */
